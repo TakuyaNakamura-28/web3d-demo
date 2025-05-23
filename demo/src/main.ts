@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import Stats from 'three/addons/libs/stats.module.js'
 import { GUI } from 'dat.gui'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
+// import type {Object3DEventMap} from "three";
 
 const scene = new THREE.Scene()
 scene.add(new THREE.AxesHelper(5))
@@ -50,11 +51,12 @@ const cubeFolder = gui.addFolder('Cube')
 cubeFolder.add(cube.rotation, 'x', 0, Math.PI * 2)
 cubeFolder.add(cube.rotation, 'y', 0, Math.PI * 2)
 cubeFolder.add(cube.rotation, 'z', 0, Math.PI * 2)
-cubeFolder.open()
 
 const cameraFolder = gui.addFolder('Camera')
 cameraFolder.add(camera.position, 'z', 0, 20)
-cameraFolder.open()
+
+const animationsFolder = gui.addFolder('Animations')
+animationsFolder.open()
 
 
 let modelReady = false
@@ -63,6 +65,9 @@ const fbxLoader = new FBXLoader()
 let mixer: THREE.AnimationMixer
 const animationActions: THREE.AnimationAction[] = []
 let activeAction: THREE.AnimationAction
+let lastAction: THREE.AnimationAction
+// let originalCharacter: THREE.Group<Object3DEventMap>
+// let alternateCharacter: THREE.Group<Object3DEventMap>
 
 fbxLoader.load(
     'jump.fbx',
@@ -82,12 +87,35 @@ fbxLoader.load(
             (object as THREE.Object3D).animations[0]
         )
         animationActions.push(animationAction)
-        // animationsFolder.add(animations, 'default')
+        animationsFolder.add(animations, 'default')
         activeAction = animationActions[0]
         activeAction.play()
 
         scene.add(object)
+        // originalCharacter = object
         modelReady = true
+
+
+        fbxLoader.load("Jog In Circle.fbx",
+            (object) => {
+
+                const animationAction = mixer.clipAction(
+                    (object as THREE.Object3D).animations[0]
+                )
+                animationActions.push(animationAction)
+                animationsFolder.add(animations, 'alternate')
+
+                scene.add(object)
+
+                modelReady = true
+            },
+            (xhr) => {
+                console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
+            },
+            (error) => {
+                console.log(error)
+            }
+        )
     },
     (xhr) => {
         console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
@@ -97,7 +125,51 @@ fbxLoader.load(
     }
 )
 
+
+// fbxLoader.load("character.fbx",
+//     (object) => {
+//         object.scale.set(.005, .005, .005)
+//         alternateCharacter = object
+//         animationsFolder.add(animations, 'swapCharacter')
+//     },
+//     (xhr) => {
+//         console.log((xhr.loaded / xhr.total) * 100 + '% loaded')
+//     },
+//     (error) => {
+//         console.log(error)
+//     }
+// )
+
 const clock = new THREE.Clock()
+
+
+const animations = {
+    default: function () {
+        setAction(animationActions[0])
+    },
+    alternate: function () {
+        setAction(animationActions[1])
+    },
+    // swapCharacter: function (){
+    //     scene.add()
+    //     scene.remove(originalCharacter)
+    //
+    //     scene.add(alternateCharacter)
+    //     mixer = new THREE.AnimationMixer(alternateCharacter)
+    //
+    // }
+}
+
+const setAction = (toAction: THREE.AnimationAction) => {
+    if (toAction != activeAction) {
+        lastAction = activeAction
+        activeAction = toAction
+        lastAction.fadeOut(1)
+        activeAction.reset()
+        activeAction.fadeIn(1)
+        activeAction.play()
+    }
+}
 
 function animate() {
     requestAnimationFrame(animate)
