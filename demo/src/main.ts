@@ -6,7 +6,7 @@ import Stats from 'three/addons/libs/stats.module.js'
 import {GUI} from 'dat.gui'
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js'
 import {setupLighting} from "./lighting.ts";
-import {plumMagenta, skyBlue, strawberryRed, teaGreen} from "./colors.ts";
+import {forcePlateColors} from "./colors.ts";
 import {addForcePlateGridToScene, type ForcePlateDatum, parseForcePlateData} from "./forcePlates.ts";
 
 const forcePlateStartDistance = 0.2;
@@ -33,12 +33,8 @@ window.addEventListener('resize', () => {
 new OrbitControls(camera, renderer.domElement)
 
 
-const forcePlateArrows: Array<ArrowHelper> = [teaGreen, strawberryRed, skyBlue, plumMagenta].map(
-    (color, index) =>
-        new ArrowHelper(
-            new Vector3(0, 1, 0).normalize(),
-            new Vector3(forcePlateStartDistance + forcePlateSpacing * index, 0, 0),
-            1, color)
+const forcePlateArrows: Array<ArrowHelper> = forcePlateColors.map(
+    (color) => new ArrowHelper(undefined, undefined, undefined, color)
 )
 forcePlateArrows.forEach((arrow) => scene.add(arrow))
 
@@ -88,6 +84,10 @@ fbxLoader.load(
                 playbackFolder.add(activeAction, 'timeScale', 0, 1)
 
                 modelReady = true
+
+                const clip = object.animations[0]; // This is a THREE.AnimationClip
+
+                console.log(clip.tracks)
             }
         )
     },
@@ -126,8 +126,10 @@ function animate() {
                 circle.scale.setScalar(Math.abs(forcePlateDataCurrentRow[index].t) / 100)
             })
 
+            const forcePlateVectorDisplayScale = 1 / 1000
+
             forcePlateArrows.forEach((arrow, index) => {
-                arrow.setLength(forcePlateDataCurrentRow[index].y / 1000)
+                arrow.setLength(forcePlateDataCurrentRow[index].y * forcePlateVectorDisplayScale)
                 arrow.setDirection((new Vector3(forcePlateDataCurrentRow[index].x, forcePlateDataCurrentRow[index].y, forcePlateDataCurrentRow[index].z)).normalize())
                 arrow.position.set(
                     forcePlateStartDistance + forcePlateSpacing * index - Number(forcePlateDataCurrentRow[index].py) * forcePlateLength,

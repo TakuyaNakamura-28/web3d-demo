@@ -1,9 +1,9 @@
 import * as THREE from "three";
 import {Scene} from "three";
-import {plumMagenta, skyBlue, strawberryRed, teaGreen} from "./colors.ts";
+import {forcePlateColors} from "./colors.ts";
 
 export function addForcePlateGridToScene(scene: Scene, start: number, spacing: number, scale: number) {
-    [teaGreen, strawberryRed, skyBlue, plumMagenta].forEach((color, index) => {
+    forcePlateColors.forEach((color, index) => {
         const material = new THREE.MeshBasicMaterial({color, wireframe: true})
         const geometry = new THREE.PlaneGeometry(scale, scale, 5, 5)
         geometry.rotateX(Math.PI / 2)
