@@ -85,9 +85,18 @@ fbxLoader.load(
 
                 modelReady = true
 
-                const clip = object.animations[0]; // This is a THREE.AnimationClip
+                const clip = objectInner.animations[0];
 
                 console.log(clip.tracks)
+                for (const track of clip.tracks) {
+                    console.log('Track name:', track.name);
+
+                    const times = track.times;
+                    const values = track.values;
+
+                    console.log('Times:', times);
+                    console.log('Values:', values);
+                }
             }
         )
     },

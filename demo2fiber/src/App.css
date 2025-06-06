@@ -1,0 +1,14 @@
+#canvas-container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: row;
+}
+canvas {
+    display: block; /* remove default inline spacing */
+}
+
+.analysisUI {
+    padding: 30px;
+    width: 50%;
+}
