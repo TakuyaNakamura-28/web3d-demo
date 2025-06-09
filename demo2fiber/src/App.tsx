@@ -4,8 +4,16 @@ import {Stats, OrbitControls} from '@react-three/drei'
 import "./App.css"
 import "./slideSwitch.css"
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js'
-import {type RefObject, useEffect, useRef, useState} from "react";
-import {AnimationAction, AnimationMixer, ArrowHelper, KeyframeTrack, Vector3} from "three";
+import {type RefObject, useEffect, useMemo, useRef, useState} from "react";
+import {
+    AnimationAction,
+    AnimationMixer,
+    ArrowHelper,
+    BufferGeometry,
+    KeyframeTrack,
+    SkeletonHelper,
+    Vector3
+} from "three";
 import {ForcePlateGrid} from "./forcePlateOverlay.tsx";
 import {LineChart, Line, YAxis, Brush, ResponsiveContainer, ReferenceLine, Tooltip, XAxis} from 'recharts';
 import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
@@ -89,6 +97,8 @@ function App() {
 
     const character = useLoader(FBXLoader, 'f2.fbx')
     const trackData = useLoader(FBXLoader, 'binaryMotiveData.fbx')
+    const [skeleton, setSkeleton] = useState<SkeletonHelper | null>(null)
+    const [skeletonEnabled, setSkeletonEnabled] = useState<boolean>(false)
 
     const mixerRef = useRef<AnimationMixer>(undefined)
     const activeAction = useRef<AnimationAction>(undefined)
@@ -110,6 +120,12 @@ function App() {
             action.play()
 
             setRawData(clip.tracks)
+
+            const skeletonHelper = new SkeletonHelper(character)
+            // skeletonHelper.material.linewidth = 2
+            // skeletonHelper.material.transparent = true
+            // skeletonHelper.material.opacity = 0.7
+            setSkeleton(skeletonHelper)
         }
     }, [character, trackData])
 
@@ -151,13 +167,32 @@ function App() {
                     scale={forcePlateLength}
                 />
 
+                {skeletonEnabled && skeletonEnabled && <primitive object={skeleton}/>}
+
                 <Stats/>
+
 
             </Canvas>
             <div className={"analysisUI"}>
                 <h2>トヨ推 分析 情報 Frontier</h2>
 
-                <div style={{backgroundColor: '#eee', height: "50%"}}>
+                <div className="chartContainer">
+                    {/*<Canvas*/}
+                    {/*    orthographic*/}
+                    {/*    camera={{*/}
+                    {/*        zoom: 1,           // zoom level (higher = zoom in)*/}
+                    {/*        left: 0,*/}
+                    {/*        right: 1,*/}
+                    {/*        top: 1,*/}
+                    {/*        bottom: 0,*/}
+                    {/*        near: -1000,*/}
+                    {/*        far: 1000,*/}
+                    {/*        position: [0, 0, 10], // look from Z axis*/}
+                    {/*    }}*/}
+                    {/*>*/}
+                    {/*    <OrbitControls/>*/}
+                    {/*    <ThreeGraph data={graphData} />*/}
+                    {/*</Canvas>*/}
                     <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={graphData}>
                             <Line type="monotone" dataKey="x" stroke="#ff0000" dot={false}/>
@@ -230,6 +265,17 @@ function App() {
                             }
                         />
                     </label>
+                    <br/>
+                    <label>
+                        スケルトンを表示
+                        <input
+                            type="checkbox"
+                            className="slideSwitchInput"
+                            onChange={(e) =>
+                                setSkeletonEnabled(e.target.checked)
+                            }
+                        />
+                    </label>
                 </p>
             </div>
         </div>
@@ -237,3 +283,18 @@ function App() {
 }
 
 export default App;
+
+function ThreeGraph({data}: { data: { y: number }[] }) {
+    const points = useMemo(() => {
+        return data.map((d, i) => new Vector3(i * 0.0001, d.y, 0))
+    }, [data])
+
+    const geometry = useMemo(() => new BufferGeometry().setFromPoints(points), [points])
+
+    return (
+        <line>
+            <primitive object={geometry} attach="geometry"/>
+            <lineBasicMaterial attach="material" color="red" />
+        </line>
+    )
+}

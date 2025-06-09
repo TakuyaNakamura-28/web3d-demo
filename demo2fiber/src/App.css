@@ -20,6 +20,11 @@ canvas {
     flex-direction: column;
     justify-content: stretch;
     background: #567;
+    .chartContainer {
+        background: #eee;
+        height: 40%;
+        font-size: 8px;
+    }
     .buttonList {
         background: darkslategray;
         overflow-y: scroll;
