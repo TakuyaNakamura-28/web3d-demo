@@ -5,8 +5,9 @@ import "./App.css"
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js'
 import {type RefObject, useEffect, useRef, useState} from "react";
 import {AnimationAction, AnimationMixer, ArrowHelper, KeyframeTrack, Vector3} from "three";
-import {type ForcePlateDatum, ForcePlateGrid, parseForcePlateData} from "./forcePlates.tsx";
-import {LineChart, Line, YAxis, Brush} from 'recharts';
+import {ForcePlateGrid} from "./forcePlateOverlay.tsx";
+import {LineChart, Line, YAxis, Brush, ResponsiveContainer, ReferenceLine, Tooltip} from 'recharts';
+import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
 
 const forcePlateStartDistance = 0.2;
 const forcePlateSpacing = 0.50;
@@ -25,10 +26,11 @@ function CharacterWithAnimation({mixerRef, character}: {
 }
 
 
-function ForcePlateArrows({arrowRefs, forcePlateData, activeAction}: {
+function ForcePlateArrows({arrowRefs, forcePlateData, activeAction, animationProgressRef}: {
     arrowRefs: RefObject<ArrowHelper[]>,
     forcePlateData: Array<Array<ForcePlateDatum>>,
-    activeAction?: AnimationAction
+    activeAction?: AnimationAction,
+    animationProgressRef: RefObject<number>
 }) {
     useFrame(() => {
         if (forcePlateData.length === 0 || !activeAction) return
@@ -48,6 +50,8 @@ function ForcePlateArrows({arrowRefs, forcePlateData, activeAction}: {
                 Number(forcePlateDataCurrentRow[index].px) * forcePlateLength
             )
         })
+
+        animationProgressRef.current = activeAction.time / activeAction.getClip().duration
     })
 
     return (
@@ -88,8 +92,12 @@ function App() {
     const mixerRef = useRef<AnimationMixer>(undefined)
     const activeAction = useRef<AnimationAction>(undefined)
 
+    const animationProgressRef = useRef(0.0)
+    const [playbackIndex, setPlaybackIndex] = useState<number>(0)
+
     const [rawData, setRawData] = useState<KeyframeTrack[]>([])
     const [graphData, setGraphData] = useState<Array<any>>([])
+    const [playbackSpeed, setPlaybackSpeed] = useState<string>("100")
 
     useEffect(() => {
         if (character && trackData.animations.length > 0) {
@@ -103,13 +111,24 @@ function App() {
         }
     }, [character, trackData])
 
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!activeAction.current || graphData.length === 0) return
+
+            const progress = activeAction.current.time / activeAction.current.getClip().duration
+            const newIndex = Math.floor(progress * graphData.length)
+            setPlaybackIndex(newIndex)
+        }, 333)
+
+        return () => clearInterval(interval)
+    }, [graphData])
 
     return (
         <div id="canvas-container">
             <Canvas camera={{fov: 75, near: 0.01, far: 1000}}>
 
                 <ForcePlateArrows arrowRefs={arrowRefs} forcePlateData={forcePlateData}
-                                  activeAction={activeAction.current}/>
+                                  activeAction={activeAction.current} animationProgressRef={animationProgressRef}/>
 
                 <axesHelper/>
                 <color attach="background" args={[slateGray]}/>
@@ -134,29 +153,35 @@ function App() {
 
             </Canvas>
             <div className={"analysisUI"}>
-                <h1>トヨ推 分析 情報 Frontier</h1>
+                <h2>トヨ推 分析 情報 Frontier</h2>
 
-                <div style={{backgroundColor: '#f0f0f0', padding: 10}}>
-                    <LineChart width={400} height={400} data={
-                        graphData
-                    }>
-                        <Line type="monotone" dataKey="x" stroke="#ff0000" dot={false}/>
-                        <Line type="monotone" dataKey="y" stroke="#00ff00" dot={false}/>
-                        <Line type="monotone" dataKey="z" stroke="#0000ff" dot={false}/>
-                        <Line type="monotone" dataKey="w" stroke="#000000" dot={false}/>
-                        <YAxis domain={['auto', 'auto']}/>
+                <div style={{backgroundColor: '#eee', height: "50%"}}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={graphData}>
+                            <Line type="monotone" dataKey="x" stroke="#ff0000" dot={false}/>
+                            <Line type="monotone" dataKey="y" stroke="#00ff00" dot={false}/>
+                            <Line type="monotone" dataKey="z" stroke="#0000ff" dot={false}/>
+                            <Line type="monotone" dataKey="w" stroke="#000000" dot={false}/>
+                            <YAxis domain={['auto', 'auto']}/>
 
-                        <Brush dataKey="index" height={30} stroke="#8884d8"/>
-
-                    </LineChart>
+                            <Brush dataKey="index" height={30} stroke="#888"/>
+                            <ReferenceLine
+                                x={Math.round(animationProgressRef.current * graphData.length)}
+                                stroke="black"
+                                strokeDasharray="3 3"
+                            />
+                            <Tooltip />
+                        </LineChart>
+                    </ResponsiveContainer>
                 </div>
-                <div style={{height: "400px", overflowY: "scroll", background: "#eee"}}>
+                <div className={"buttonList"}>
                     {rawData.map((track) => (
                         <button onClick={() => {
                             const groupedData = []
                             for (let i = 0; i < track.values.length; i += (track.name.includes("quaternion") ? 4 : 3)) {
                                 if (track.name.includes("quaternion")) {
                                     groupedData.push({
+                                        index: i / 4,
                                         x: track.values[i],
                                         y: track.values[i + 1],
                                         z: track.values[i + 2],
@@ -164,10 +189,10 @@ function App() {
                                     })
                                 } else {
                                     groupedData.push({
+                                        index: i / 3,
                                         x: track.values[i],
                                         y: track.values[i + 1],
                                         z: track.values[i + 2],
-                                        // w: graph[i + 3],
                                     })
                                 }
                             }
@@ -175,6 +200,21 @@ function App() {
                         }}
                         >{track.name}</button>
                     ))}
+                </div>
+                <p>現在データ索引番号：<strong className={"displayValue"}>{playbackIndex}</strong></p>
+                <div>
+                    <input
+                        type="range" min="0" max="1.0" step="0.01" defaultValue="1.0"
+                        onChange={(e) => {
+                            if (activeAction.current) {
+                                activeAction.current.timeScale = Number(e.target.value)
+                            }
+                            setPlaybackSpeed(Math.round(Number(e.target.value) * 100) + "%")
+                        }}
+                    />
+                </div>
+                <div>
+                    現在再生速度：<strong className={"displayValue"}>{playbackSpeed}</strong>
                 </div>
             </div>
         </div>
