@@ -2,11 +2,12 @@ import {Canvas, useFrame, useLoader} from '@react-three/fiber'
 import {forcePlateColors, slateGray} from "./colors.ts";
 import {Stats, OrbitControls} from '@react-three/drei'
 import "./App.css"
+import "./slideSwitch.css"
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js'
 import {type RefObject, useEffect, useRef, useState} from "react";
 import {AnimationAction, AnimationMixer, ArrowHelper, KeyframeTrack, Vector3} from "three";
 import {ForcePlateGrid} from "./forcePlateOverlay.tsx";
-import {LineChart, Line, YAxis, Brush, ResponsiveContainer, ReferenceLine, Tooltip} from 'recharts';
+import {LineChart, Line, YAxis, Brush, ResponsiveContainer, ReferenceLine, Tooltip, XAxis} from 'recharts';
 import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
 
 const forcePlateStartDistance = 0.2;
@@ -98,6 +99,7 @@ function App() {
     const [rawData, setRawData] = useState<KeyframeTrack[]>([])
     const [graphData, setGraphData] = useState<Array<any>>([])
     const [playbackSpeed, setPlaybackSpeed] = useState<string>("100")
+    const [autoRotate, setAutoRotate] = useState<boolean>(false)
 
     useEffect(() => {
         if (character && trackData.animations.length > 0) {
@@ -132,12 +134,12 @@ function App() {
 
                 <axesHelper/>
                 <color attach="background" args={[slateGray]}/>
-                <OrbitControls/>
+                <OrbitControls autoRotate={autoRotate} autoRotateSpeed={10.0}/>
 
                 <ambientLight intensity={1} color={0xffffff}/>
                 <directionalLight
                     color={0xffffff}
-                    intensity={0.5}
+                    intensity={0.8}
                     position={[0.8, 1.4, 1.0]}
                 />
 
@@ -163,14 +165,15 @@ function App() {
                             <Line type="monotone" dataKey="z" stroke="#0000ff" dot={false}/>
                             <Line type="monotone" dataKey="w" stroke="#000000" dot={false}/>
                             <YAxis domain={['auto', 'auto']}/>
+                            <XAxis dataKey="index"/>
 
-                            <Brush dataKey="index" height={30} stroke="#888"/>
+                            <Brush dataKey="index" height={30} stroke="#088"/>
                             <ReferenceLine
                                 x={Math.round(animationProgressRef.current * graphData.length)}
                                 stroke="black"
                                 strokeDasharray="3 3"
                             />
-                            <Tooltip />
+                            <Tooltip/>
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
@@ -216,6 +219,18 @@ function App() {
                 <div>
                     現在再生速度：<strong className={"displayValue"}>{playbackSpeed}</strong>
                 </div>
+                <p>
+                    <label>
+                        自動回転
+                        <input
+                            type="checkbox"
+                            className="slideSwitchInput"
+                            onChange={(e) =>
+                                setAutoRotate(e.target.checked)
+                            }
+                        />
+                    </label>
+                </p>
             </div>
         </div>
     )

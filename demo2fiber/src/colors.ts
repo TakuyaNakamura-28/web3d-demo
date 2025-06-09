@@ -11,4 +11,4 @@ export const forcePlateColors = [
     plumMagenta,
 ]
 
-export const slateGray = 0x202020
+export const slateGray = 0x303030
