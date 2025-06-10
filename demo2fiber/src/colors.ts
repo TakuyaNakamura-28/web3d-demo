@@ -12,3 +12,4 @@ export const forcePlateColors = [
 ]
 
 export const slateGray = 0x303030
+export const ashGray = 0xc0c0c0

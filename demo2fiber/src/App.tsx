@@ -1,5 +1,5 @@
-import {Canvas, useFrame, useLoader} from '@react-three/fiber'
-import {forcePlateColors, slateGray} from "./colors.ts";
+import {Canvas, useFrame, useLoader, useThree} from '@react-three/fiber'
+import {ashGray, forcePlateColors, plumMagenta, skyBlue, slateGray, strawberryRed, teaGreen} from "./colors.ts";
 import {Stats, OrbitControls} from '@react-three/drei'
 import "./App.css"
 import "./slideSwitch.css"
@@ -9,13 +9,11 @@ import {
     AnimationAction,
     AnimationMixer,
     ArrowHelper,
-    BufferGeometry,
     KeyframeTrack,
-    SkeletonHelper,
+    SkeletonHelper, Vector2,
     Vector3
 } from "three";
 import {ForcePlateGrid} from "./forcePlateOverlay.tsx";
-import {LineChart, Line, YAxis, Brush, ResponsiveContainer, ReferenceLine, Tooltip, XAxis} from 'recharts';
 import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
 
 const forcePlateStartDistance = 0.2;
@@ -104,10 +102,9 @@ function App() {
     const activeAction = useRef<AnimationAction>(undefined)
 
     const animationProgressRef = useRef(0.0)
-    const [playbackIndex, setPlaybackIndex] = useState<number>(0)
 
     const [rawData, setRawData] = useState<KeyframeTrack[]>([])
-    const [graphData, setGraphData] = useState<Array<any>>([])
+    const [graphData, setGraphData] = useState<Array<{ x: number, y: number, z: number, w?: number }>>([])
     const [playbackSpeed, setPlaybackSpeed] = useState<string>("100")
     const [autoRotate, setAutoRotate] = useState<boolean>(false)
 
@@ -122,24 +119,9 @@ function App() {
             setRawData(clip.tracks)
 
             const skeletonHelper = new SkeletonHelper(character)
-            // skeletonHelper.material.linewidth = 2
-            // skeletonHelper.material.transparent = true
-            // skeletonHelper.material.opacity = 0.7
             setSkeleton(skeletonHelper)
         }
     }, [character, trackData])
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (!activeAction.current || graphData.length === 0) return
-
-            const progress = activeAction.current.time / activeAction.current.getClip().duration
-            const newIndex = Math.floor(progress * graphData.length)
-            setPlaybackIndex(newIndex)
-        }, 333)
-
-        return () => clearInterval(interval)
-    }, [graphData])
 
     return (
         <div id="canvas-container">
@@ -177,44 +159,22 @@ function App() {
                 <h2>トヨ推 分析 情報 Frontier</h2>
 
                 <div className="chartContainer">
-                    {/*<Canvas*/}
-                    {/*    orthographic*/}
-                    {/*    camera={{*/}
-                    {/*        zoom: 1,           // zoom level (higher = zoom in)*/}
-                    {/*        left: 0,*/}
-                    {/*        right: 1,*/}
-                    {/*        top: 1,*/}
-                    {/*        bottom: 0,*/}
-                    {/*        near: -1000,*/}
-                    {/*        far: 1000,*/}
-                    {/*        position: [0, 0, 10], // look from Z axis*/}
-                    {/*    }}*/}
-                    {/*>*/}
-                    {/*    <OrbitControls/>*/}
-                    {/*    <ThreeGraph data={graphData} />*/}
-                    {/*</Canvas>*/}
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={graphData}>
-                            <Line type="monotone" dataKey="x" stroke="#ff0000" dot={false}/>
-                            <Line type="monotone" dataKey="y" stroke="#00ff00" dot={false}/>
-                            <Line type="monotone" dataKey="z" stroke="#0000ff" dot={false}/>
-                            <Line type="monotone" dataKey="w" stroke="#000000" dot={false}/>
-                            <YAxis domain={['auto', 'auto']}/>
-                            <XAxis dataKey="index"/>
-
-                            <Brush dataKey="index" height={30} stroke="#088"/>
-                            <ReferenceLine
-                                x={Math.round(animationProgressRef.current * graphData.length)}
-                                stroke="black"
-                                strokeDasharray="3 3"
-                            />
-                            <Tooltip/>
-                        </LineChart>
-                    </ResponsiveContainer>
+                    <Canvas
+                        orthographic
+                        camera={{
+                            zoom: 1,
+                            left: -0.1, right: 1,
+                            top: 1.1, bottom: -1.1,
+                            near: -1000, far: 1000,
+                            position: [0, 0, 10],
+                        }}
+                    >
+                        <ThreeGraph data={graphData} progress={animationProgressRef}/>
+                    </Canvas>
                 </div>
                 <div className={"buttonList"}>
                     {rawData.map((track) => (
-                        <button onClick={() => {
+                        <button key={track.name} onClick={() => {
                             const groupedData = []
                             for (let i = 0; i < track.values.length; i += (track.name.includes("quaternion") ? 4 : 3)) {
                                 if (track.name.includes("quaternion")) {
@@ -238,8 +198,11 @@ function App() {
                         }}
                         >{track.name}</button>
                     ))}
+                    <button onClick={() => {
+                        setGraphData([])
+                    }}>無し
+                    </button>
                 </div>
-                <p>現在データ索引番号：<strong className={"displayValue"}>{playbackIndex}</strong></p>
                 <div>
                     <input
                         type="range" min="0" max="1.0" step="0.01" defaultValue="1.0"
@@ -284,17 +247,131 @@ function App() {
 
 export default App;
 
-function ThreeGraph({data}: { data: { y: number }[] }) {
-    const points = useMemo(() => {
-        return data.map((d, i) => new Vector3(i * 0.0001, d.y, 0))
+import {MeshLineMaterial, MeshLineGeometry} from 'meshline'
+import {Text} from '@react-three/drei'
+
+function ThreeGraph({data, progress}: {
+    data: { x: number, y: number, z: number, w?: number }[],
+    progress: RefObject<number>
+}) {
+    const {camera, gl} = useThree()
+    useEffect(() => {
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault()
+        }
+
+        gl.domElement.addEventListener('wheel', handleWheel)
+        return () => gl.domElement.removeEventListener('wheel', handleWheel)
+    }, [camera, gl])
+
+    const scale = useMemo(() =>
+            data.length > 0 &&
+            Math.max(...data.map(datum => Math.max(Math.abs(datum.x), Math.abs(datum.y), Math.abs(datum.z), 1)))
+        , [data])
+
+    const line = useMemo(() => {
+        if (data.length == 0) {
+            return []
+        }
+        // const scale = Math.max(...data.map(datum => Math.max(Math.abs(datum.x), Math.abs(datum.y), Math.abs(datum.z), 1)))
+        const meshLineX = new MeshLineGeometry()
+        meshLineX.setPoints(data.map((d, i) => new Vector3(i / data.length, d.x / scale, 0)))
+        const meshLineY = new MeshLineGeometry()
+        meshLineY.setPoints(data.map((d, i) => new Vector3(i / data.length, d.y / scale, 0)))
+        const meshLineZ = new MeshLineGeometry()
+        meshLineZ.setPoints(data.map((d, i) => new Vector3(i / data.length, d.z / scale, 0)))
+        if (data[0].w !== undefined) {
+            const meshLineW = new MeshLineGeometry()
+            meshLineW.setPoints(data.map((d, i) => new Vector3(i / data.length, d.w / scale, 0)))
+            return [meshLineX, meshLineY, meshLineZ, meshLineW]
+        }
+        return [meshLineX, meshLineY, meshLineZ]
     }, [data])
 
-    const geometry = useMemo(() => new BufferGeometry().setFromPoints(points), [points])
+    const progressLine = useMemo(() => {
+        const line = new MeshLineGeometry()
+        line.setPoints([new Vector3(progress.current, -1, 0), new Vector3(progress.current, 1, 0)])
+        return line
+    }, [progress])
 
-    return (
-        <line>
-            <primitive object={geometry} attach="geometry"/>
-            <lineBasicMaterial attach="material" color="red" />
-        </line>
-    )
+
+    useFrame(() => {
+        progressLine.setPoints([new Vector3(progress.current, -1, 0), new Vector3(progress.current, 1, 0)])
+    })
+
+    if (data.length == 0) {
+        return null
+    }
+
+    const lineColors = [strawberryRed, teaGreen, skyBlue, plumMagenta]
+
+    return (<>
+        <gridHelper args={[2, 20, ashGray, "#666666"]}   position={[1, 0, 0]}
+                    rotation={[Math.PI / 2, 0, 0]}/>
+
+        {line.map((oneline, i) => (
+            <mesh>
+                <primitive attach="geometry" object={oneline}/>
+                <primitive
+                    attach="material"
+                    object={
+                        new MeshLineMaterial({
+                            color: lineColors[i],
+                            lineWidth: 0.01,
+                            opacity: 1,
+                            resolution: new Vector2(10, 10)
+                        })
+                    }
+                />
+            </mesh>
+        ))}
+        <mesh>
+            <primitive attach="geometry" object={progressLine}/>
+            <primitive
+                attach="material"
+                object={
+                    new MeshLineMaterial({
+                        color: ashGray,
+                        lineWidth: 0.01,
+                        opacity: 1,
+                        resolution: new Vector2(10, 10),
+                        dashArray: 0.01,
+                        dashRatio: 0.3,
+                    })
+                }
+            />
+        </mesh>
+        {scale && (<>
+            <Text
+                position={[-0.01, 1, 0]}
+                fontSize={0.05}
+                color="white"
+                anchorX="right"
+                anchorY="middle"
+                scale={new Vector3(0.5,1,1)}
+            >
+                {scale.toFixed(2)}
+            </Text>
+            <Text
+                position={[-0.01, 0, 0]}
+                fontSize={0.05}
+                color="white"
+                anchorX="right"
+                anchorY="middle"
+                scale={new Vector3(0.5,1,1)}
+            >
+                {(0).toFixed(2)}
+            </Text>
+            <Text
+                position={[-0.01, -1, 0]}
+                fontSize={0.05}
+                color="white"
+                anchorX="right"
+                anchorY="middle"
+                scale={new Vector3(0.5,1,1)}
+            >
+                {(-scale).toFixed(2)}
+            </Text>
+        </>)}
+    </>)
 }
