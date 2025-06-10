@@ -1,4 +1,4 @@
-import {Canvas, useFrame, useLoader, useThree} from '@react-three/fiber'
+import {Canvas, useFrame, useLoader} from '@react-three/fiber'
 import {ashGray, forcePlateColors, plumMagenta, skyBlue, slateGray, strawberryRed, teaGreen} from "./colors.ts";
 import {Stats, OrbitControls} from '@react-three/drei'
 import "./App.css"
@@ -8,8 +8,7 @@ import {type RefObject, useEffect, useMemo, useRef, useState} from "react";
 import {
     AnimationAction,
     AnimationMixer,
-    ArrowHelper,
-    KeyframeTrack,
+    ArrowHelper, KeyframeTrack, Quaternion,
     SkeletonHelper, Vector2,
     Vector3
 } from "three";
@@ -97,6 +96,7 @@ function App() {
     const trackData = useLoader(FBXLoader, 'binaryMotiveData.fbx')
     const [skeleton, setSkeleton] = useState<SkeletonHelper | null>(null)
     const [skeletonEnabled, setSkeletonEnabled] = useState<boolean>(false)
+    const [showAngularVelocity, setShowAngularVelocity] = useState<boolean>(false)
 
     const mixerRef = useRef<AnimationMixer>(undefined)
     const activeAction = useRef<AnimationAction>(undefined)
@@ -169,7 +169,12 @@ function App() {
                             position: [0, 0, 10],
                         }}
                     >
-                        <ThreeGraph data={graphData} progress={animationProgressRef}/>
+                        <ThreeGraph data={graphData} progress={animationProgressRef}
+                                    duration={activeAction.current?.getClip().duration}
+                                    showAngularVelocity={showAngularVelocity}
+                        />
+
+                        <Stats/>
                     </Canvas>
                 </div>
                 <div className={"buttonList"}>
@@ -205,7 +210,7 @@ function App() {
                 </div>
                 <div>
                     <input
-                        type="range" min="0" max="1.0" step="0.01" defaultValue="1.0"
+                        type="range" min="-1.0" max="1.0" step="0.01" defaultValue="1.0"
                         onChange={(e) => {
                             if (activeAction.current) {
                                 activeAction.current.timeScale = Number(e.target.value)
@@ -239,6 +244,17 @@ function App() {
                             }
                         />
                     </label>
+                    <br/>
+                    <label>
+                        角速度を表示
+                        <input
+                            type="checkbox"
+                            className="slideSwitchInput"
+                            onChange={(e) =>
+                                setShowAngularVelocity(e.target.checked)
+                            }
+                        />
+                    </label>
                 </p>
             </div>
         </div>
@@ -250,30 +266,24 @@ export default App;
 import {MeshLineMaterial, MeshLineGeometry} from 'meshline'
 import {Text} from '@react-three/drei'
 
-function ThreeGraph({data, progress}: {
+function ThreeGraph({data, progress, duration, showAngularVelocity}: {
     data: { x: number, y: number, z: number, w?: number }[],
-    progress: RefObject<number>
+    progress: RefObject<number>,
+    duration?: number,
+    showAngularVelocity: number,
 }) {
-    const {camera, gl} = useThree()
-    useEffect(() => {
-        const handleWheel = (event: WheelEvent) => {
-            event.preventDefault()
-        }
-
-        gl.domElement.addEventListener('wheel', handleWheel)
-        return () => gl.domElement.removeEventListener('wheel', handleWheel)
-    }, [camera, gl])
+    const [graphScale, setGraphScale] = useState<number>(1.0)
 
     const scale = useMemo(() =>
-            data.length > 0 &&
-            Math.max(...data.map(datum => Math.max(Math.abs(datum.x), Math.abs(datum.y), Math.abs(datum.z), 1)))
+            data.length > 0 ?
+                Math.max(...data.map(datum => Math.max(Math.abs(datum.x), Math.abs(datum.y), Math.abs(datum.z), 1))) : 1
         , [data])
 
     const line = useMemo(() => {
         if (data.length == 0) {
             return []
         }
-        // const scale = Math.max(...data.map(datum => Math.max(Math.abs(datum.x), Math.abs(datum.y), Math.abs(datum.z), 1)))
+
         const meshLineX = new MeshLineGeometry()
         meshLineX.setPoints(data.map((d, i) => new Vector3(i / data.length, d.x / scale, 0)))
         const meshLineY = new MeshLineGeometry()
@@ -283,10 +293,26 @@ function ThreeGraph({data, progress}: {
         if (data[0].w !== undefined) {
             const meshLineW = new MeshLineGeometry()
             meshLineW.setPoints(data.map((d, i) => new Vector3(i / data.length, d.w / scale, 0)))
+
+            const speeds: number[] = []
+            for (let i = 1; i < data.length; i++) {
+                speeds.push(estimateScalarAngularVelocity(
+                    new Quaternion(data[i - 1].x, data[i - 1].y, data[i - 1].z, data[i - 1].w),
+                    new Quaternion(data[i].x, data[i].y, data[i].z, data[i].w),
+                    (duration ?? 0) / data.length
+                ))
+            }
+            const meshLineV = new MeshLineGeometry()
+
+            meshLineV.setPoints(speeds.map((d, i) => new Vector3(i / data.length, d, 0)))
+
+            if (showAngularVelocity) {
+                return [meshLineX, meshLineY, meshLineZ, meshLineW, meshLineV]
+            }
             return [meshLineX, meshLineY, meshLineZ, meshLineW]
         }
         return [meshLineX, meshLineY, meshLineZ]
-    }, [data, scale])
+    }, [data, duration, scale, showAngularVelocity])
 
     const progressLine = useMemo(() => {
         const line = new MeshLineGeometry()
@@ -303,22 +329,23 @@ function ThreeGraph({data, progress}: {
         return null
     }
 
-    const lineColors = [strawberryRed, teaGreen, skyBlue, plumMagenta]
+    const lineColors = [strawberryRed, teaGreen, skyBlue, plumMagenta, ashGray]
 
     return (<>
-        <gridHelper args={[2, 20, ashGray, "#666666"]}   position={[1, 0, 0]}
+        <gridHelper args={[2, 20, ashGray, "#666666"]} position={[1, 0, 0]}
                     rotation={[Math.PI / 2, 0, 0]}/>
 
         {line.map((oneline, i) => (
-            <mesh>
+            <mesh key={i}>
                 <primitive attach="geometry" object={oneline}/>
                 <primitive
                     attach="material"
                     object={
                         new MeshLineMaterial({
                             color: lineColors[i],
-                            lineWidth: 0.01,
-                            opacity: 1,
+                            lineWidth: 0.005,
+                            transparent: i === 4,
+                            opacity: 0.5,
                             resolution: new Vector2(10, 10)
                         })
                     }
@@ -348,7 +375,7 @@ function ThreeGraph({data, progress}: {
                 color="white"
                 anchorX="right"
                 anchorY="middle"
-                scale={new Vector3(0.5,1,1)}
+                scale={new Vector3(0.5, 1, 1)}
             >
                 {scale.toFixed(2)}
             </Text>
@@ -358,7 +385,7 @@ function ThreeGraph({data, progress}: {
                 color="white"
                 anchorX="right"
                 anchorY="middle"
-                scale={new Vector3(0.5,1,1)}
+                scale={new Vector3(0.5, 1, 1)}
             >
                 {(0).toFixed(2)}
             </Text>
@@ -368,10 +395,21 @@ function ThreeGraph({data, progress}: {
                 color="white"
                 anchorX="right"
                 anchorY="middle"
-                scale={new Vector3(0.5,1,1)}
+                scale={new Vector3(0.5, 1, 1)}
             >
                 {(-scale).toFixed(2)}
             </Text>
         </>)}
     </>)
+}
+
+export function estimateScalarAngularVelocity(
+    q1: Quaternion,
+    q2: Quaternion,
+    dt: number
+): number {
+    const qDelta = q1.clone().invert().multiply(q2).normalize()
+    const clampedW = Math.max(-1, Math.min(1, qDelta.w))
+    const angle = 2 * Math.acos(clampedW)
+    return angle / dt
 }
