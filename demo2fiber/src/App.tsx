@@ -286,7 +286,7 @@ function ThreeGraph({data, progress}: {
             return [meshLineX, meshLineY, meshLineZ, meshLineW]
         }
         return [meshLineX, meshLineY, meshLineZ]
-    }, [data])
+    }, [data, scale])
 
     const progressLine = useMemo(() => {
         const line = new MeshLineGeometry()
