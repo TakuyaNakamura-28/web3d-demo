@@ -18,7 +18,7 @@ export default function FrontierGraph({data, progress, colors, dataKeys}: {
             setGraphScale(
                 Math.max(...data.map(datum =>
                     Math.max(...dataKeys.map(key => Math.abs(datum[key])))
-                ))
+                , 1))
             )
         }
     }, [data, dataKeys]);
@@ -31,7 +31,7 @@ export default function FrontierGraph({data, progress, colors, dataKeys}: {
         return dataKeys.map(keyName => {
                 const meshLine = new MeshLineGeometry()
                 meshLine.setPoints(
-                    data.map((d, i) => new Vector3(i / data.length, d[keyName] / graphScale, 0))
+                    data.map((d, i) => new Vector3(i / data.length, (d[keyName] ?? 0) / graphScale, 0))
                 )
                 return meshLine
             }

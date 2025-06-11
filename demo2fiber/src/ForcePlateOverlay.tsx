@@ -1,7 +1,4 @@
-import * as THREE from "three";
-import {ashGray, forcePlateColors, strawberryRed} from "./colors.ts";
-import {useMemo} from "react";
-
+import {ashGray, forcePlateColors} from "./colors.ts";
 
 export function ForcePlateOverlay({start, spacing, scale}: { start: number, spacing: number, scale: number }) {
     return forcePlateColors.map((color, index) => (

@@ -2,7 +2,7 @@ export type ForcePlateDatum = { x: number, y: number, z: number, t: number, px: 
 
 export function parseForcePlateData(csvText: string): Array<Array<ForcePlateDatum>> {
     const csvPlateDataOffsets = [4, 37, 15, 26]
-    return csvText.split('\n').map(row => row.split(',')).filter(row => row.length > 1).map(row =>
+    return csvText.split('\n').slice(1).map(row => row.split(',')).filter(row => row.length > 1).map(row =>
         csvPlateDataOffsets.map((offset) => ({
             z: Number(row[offset]),
             x: Number(row[offset + 1]),

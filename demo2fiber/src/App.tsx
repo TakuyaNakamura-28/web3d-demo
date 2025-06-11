@@ -1,5 +1,5 @@
 import {Canvas, useFrame, useLoader, useThree} from '@react-three/fiber'
-import {ashGray, slateGray} from "./colors.ts";
+import {slateGray} from "./colors.ts";
 import {OrbitControls, Stats} from '@react-three/drei'
 import "./App.css"
 import "./slideSwitch.css"
@@ -11,13 +11,13 @@ import {
     ArrowHelper,
     EquirectangularReflectionMapping,
     KeyframeTrack,
-    SkeletonHelper
+    SkeletonHelper, Vector3
 } from "three";
 import {ForcePlateOverlay} from "./ForcePlateOverlay.tsx";
 import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
 import {GraphWithVelocity} from "./GraphWithVelocity.tsx";
 import {ForcePlateArrows} from "./ForcePlateArrows.tsx";
-import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
+import {RGBELoader} from 'three/examples/jsm/loaders/RGBELoader.js'
 import hdrFile from './skybox/paul_lobe_haus_2k.hdr';
 
 const forcePlateStartDistance = 0.2;
@@ -36,8 +36,8 @@ function CharacterWithAnimation({mixerRef, character}: {
     return <primitive object={character} scale={[0.005, 0.005, 0.005]}/>
 }
 
-function Skybox({texture}: {texture: any}) {
-    const { scene } = useThree()
+function Skybox({texture}: { texture: any }) {
+    const {scene} = useThree()
 
     useEffect(() => {
         texture.mapping = EquirectangularReflectionMapping
@@ -99,7 +99,9 @@ function App() {
     return (
         <div id="canvas-container">
             <div className={"canvas"}>
-                <Canvas camera={{fov: 75, near: 0.01, far: 1000}}>
+                <Canvas
+                    camera={{fov: 75, near: 0.01, far: 1000}}
+                >
                     {/*<Skybox texture={texture}/>*/}
 
                     <ForcePlateArrows arrowRefs={arrowRefs} forcePlateData={forcePlateData}
@@ -110,7 +112,7 @@ function App() {
                                       vectorScale={forcePlateVectorDisplayScale}
                     />
 
-                    <axesHelper/>
+                    <axesHelper scale={new Vector3(0.1, 0.1, 0.1)}/>
                     <color attach="background" args={[slateGray]}/>
                     <OrbitControls autoRotate={autoRotate} autoRotateSpeed={10.0}/>
 
@@ -161,6 +163,35 @@ function App() {
                     </Canvas>
                 </div>
                 <div className={"buttonList"}>
+                    <button onClick={() => {
+                        setGraphData(
+                            forcePlateData.map((row, i) =>
+                                ({index: i, x: row[0].x, y: row[0].y, z: row[0].z,}))
+                        )
+                    }}>フォースプレート1
+                    </button>
+                    <button onClick={() => {
+                        setGraphData(
+                            forcePlateData.map((row, i) =>
+                                ({index: i, x: row[1].x, y: row[1].y, z: row[1].z,}))
+                        )
+                    }}>フォースプレート2
+                    </button>
+                    <button onClick={() => {
+                        setGraphData(
+                            forcePlateData.map((row, i) =>
+                                ({index: i, x: row[2].x, y: row[2].y, z: row[2].z,}))
+                        )
+                    }}>フォースプレート3
+                    </button>
+                    <button onClick={() => {
+                        setGraphData(
+                            forcePlateData.map((row, i) =>
+                                ({index: i, x: row[3].x, y: row[3].y, z: row[3].z,}))
+                        )
+                    }}>フォースプレート4
+                    </button>
+
                     {rawData.map((track) => (
                         <button key={track.name} onClick={() => {
                             const groupedData = []
