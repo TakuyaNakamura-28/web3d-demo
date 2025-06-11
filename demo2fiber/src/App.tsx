@@ -1,22 +1,27 @@
-import {Canvas, useFrame, useLoader} from '@react-three/fiber'
-import {ashGray, forcePlateColors, plumMagenta, skyBlue, slateGray, strawberryRed, teaGreen} from "./colors.ts";
-import {Stats, OrbitControls} from '@react-three/drei'
+import {Canvas, useFrame, useLoader, useThree} from '@react-three/fiber'
+import {ashGray, slateGray} from "./colors.ts";
+import {OrbitControls, Stats} from '@react-three/drei'
 import "./App.css"
 import "./slideSwitch.css"
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js'
-import {type RefObject, useEffect, useMemo, useRef, useState} from "react";
+import {type RefObject, useEffect, useRef, useState} from "react";
 import {
     AnimationAction,
     AnimationMixer,
-    ArrowHelper, KeyframeTrack, Quaternion,
-    SkeletonHelper, Vector2,
-    Vector3
+    ArrowHelper,
+    EquirectangularReflectionMapping,
+    KeyframeTrack,
+    SkeletonHelper
 } from "three";
-import {ForcePlateGrid} from "./forcePlateOverlay.tsx";
+import {ForcePlateOverlay} from "./ForcePlateOverlay.tsx";
 import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
+import {GraphWithVelocity} from "./GraphWithVelocity.tsx";
+import {ForcePlateArrows} from "./ForcePlateArrows.tsx";
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js'
+import hdrFile from './skybox/paul_lobe_haus_2k.hdr';
 
 const forcePlateStartDistance = 0.2;
-const forcePlateSpacing = 0.50;
+const forcePlateSpacing = 0.5;
 const forcePlateLength = 0.5;
 const forcePlateVectorDisplayScale = 1 / 1000
 
@@ -31,49 +36,16 @@ function CharacterWithAnimation({mixerRef, character}: {
     return <primitive object={character} scale={[0.005, 0.005, 0.005]}/>
 }
 
+function Skybox({texture}: {texture: any}) {
+    const { scene } = useThree()
 
-function ForcePlateArrows({arrowRefs, forcePlateData, activeAction, animationProgressRef}: {
-    arrowRefs: RefObject<ArrowHelper[]>,
-    forcePlateData: Array<Array<ForcePlateDatum>>,
-    activeAction?: AnimationAction,
-    animationProgressRef: RefObject<number>
-}) {
-    useFrame(() => {
-        if (forcePlateData.length === 0 || !activeAction) return
+    useEffect(() => {
+        texture.mapping = EquirectangularReflectionMapping
+        scene.environment = texture
+        scene.background = texture
+    }, [texture, scene])
 
-        const animationProgress = activeAction.time / activeAction.getClip().duration
-        const forcePlateCurrentDataIndex = Math.round(animationProgress * forcePlateData.length)
-        const forcePlateDataCurrentRow = forcePlateData[forcePlateCurrentDataIndex]
-
-        if (!forcePlateDataCurrentRow) return
-
-        arrowRefs.current?.forEach((arrow, index) => {
-            arrow.setLength(forcePlateDataCurrentRow[index].y * forcePlateVectorDisplayScale)
-            arrow.setDirection((new Vector3(forcePlateDataCurrentRow[index].x, forcePlateDataCurrentRow[index].y, forcePlateDataCurrentRow[index].z)).normalize())
-            arrow.position.set(
-                forcePlateStartDistance + forcePlateSpacing * index - Number(forcePlateDataCurrentRow[index].py) * forcePlateLength,
-                0,
-                Number(forcePlateDataCurrentRow[index].px) * forcePlateLength
-            )
-        })
-
-        animationProgressRef.current = activeAction.time / activeAction.getClip().duration
-    })
-
-    return (
-        <>
-            {forcePlateColors.map((color, index) => {
-                const dir = new Vector3(0, 1, 0).normalize() // default direction
-                const origin = new Vector3(index, 0, 0) // space them out
-                const length = 1.0
-
-                const arrow = new ArrowHelper(dir, origin, length, color)
-                arrowRefs.current[index] = arrow
-
-                return <primitive key={index} object={arrow}/>
-            })}
-        </>
-    )
+    return null
 }
 
 function App() {
@@ -91,6 +63,7 @@ function App() {
             })
     }, []);
 
+    const texture = useLoader(RGBELoader, hdrFile)
 
     const character = useLoader(FBXLoader, 'f2.fbx')
     const trackData = useLoader(FBXLoader, 'binaryMotiveData.fbx')
@@ -125,36 +98,48 @@ function App() {
 
     return (
         <div id="canvas-container">
-            <Canvas camera={{fov: 75, near: 0.01, far: 1000}}>
+            <div className={"canvas"}>
+                <Canvas camera={{fov: 75, near: 0.01, far: 1000}}>
+                    {/*<Skybox texture={texture}/>*/}
 
-                <ForcePlateArrows arrowRefs={arrowRefs} forcePlateData={forcePlateData}
-                                  activeAction={activeAction.current} animationProgressRef={animationProgressRef}/>
+                    <ForcePlateArrows arrowRefs={arrowRefs} forcePlateData={forcePlateData}
+                                      activeAction={activeAction.current} animationProgressRef={animationProgressRef}
+                                      start={forcePlateStartDistance}
+                                      spacing={forcePlateSpacing}
+                                      scale={forcePlateLength}
+                                      vectorScale={forcePlateVectorDisplayScale}
+                    />
 
-                <axesHelper/>
-                <color attach="background" args={[slateGray]}/>
-                <OrbitControls autoRotate={autoRotate} autoRotateSpeed={10.0}/>
+                    <axesHelper/>
+                    <color attach="background" args={[slateGray]}/>
+                    <OrbitControls autoRotate={autoRotate} autoRotateSpeed={10.0}/>
 
-                <ambientLight intensity={1} color={0xffffff}/>
-                <directionalLight
-                    color={0xffffff}
-                    intensity={0.8}
-                    position={[0.8, 1.4, 1.0]}
-                />
+                    <ambientLight intensity={1} color={0xffffff}/>
+                    <directionalLight
+                        color={0xffffff}
+                        intensity={0.8}
+                        position={[0.8, 1.4, 1.0]}
+                    />
 
-                <CharacterWithAnimation mixerRef={mixerRef} character={character}/>
+                    <CharacterWithAnimation mixerRef={mixerRef} character={character}/>
 
-                <ForcePlateGrid
-                    start={forcePlateStartDistance}
-                    spacing={forcePlateSpacing}
-                    scale={forcePlateLength}
-                />
+                    <ForcePlateOverlay
+                        start={forcePlateStartDistance}
+                        spacing={forcePlateSpacing}
+                        scale={forcePlateLength}
+                    />
 
-                {skeletonEnabled && skeletonEnabled && <primitive object={skeleton}/>}
+                    <gridHelper
+                        args={[100, 200, 0x000000, 0x000000]}
+                        position={[0, -0.01, 0]}
+                    />
 
-                <Stats/>
+                    {skeletonEnabled && skeleton && <primitive object={skeleton}/>}
 
+                    <Stats showPanel={0}/>
 
-            </Canvas>
+                </Canvas>
+            </div>
             <div className={"analysisUI"}>
                 <h2>トヨ推 分析 情報 Frontier</h2>
 
@@ -169,12 +154,10 @@ function App() {
                             position: [0, 0, 10],
                         }}
                     >
-                        <ThreeGraph data={graphData} progress={animationProgressRef}
-                                    duration={activeAction.current?.getClip().duration}
-                                    showAngularVelocity={showAngularVelocity}
+                        <GraphWithVelocity data={graphData} progress={animationProgressRef}
+                                           duration={activeAction.current?.getClip().duration}
+                                           showAngularVelocity={showAngularVelocity}
                         />
-
-                        <Stats/>
                     </Canvas>
                 </div>
                 <div className={"buttonList"}>
@@ -262,154 +245,3 @@ function App() {
 }
 
 export default App;
-
-import {MeshLineMaterial, MeshLineGeometry} from 'meshline'
-import {Text} from '@react-three/drei'
-
-function ThreeGraph({data, progress, duration, showAngularVelocity}: {
-    data: { x: number, y: number, z: number, w?: number }[],
-    progress: RefObject<number>,
-    duration?: number,
-    showAngularVelocity: number,
-}) {
-    const [graphScale, setGraphScale] = useState<number>(1.0)
-
-    const scale = useMemo(() =>
-            data.length > 0 ?
-                Math.max(...data.map(datum => Math.max(Math.abs(datum.x), Math.abs(datum.y), Math.abs(datum.z), 1))) : 1
-        , [data])
-
-    const line = useMemo(() => {
-        if (data.length == 0) {
-            return []
-        }
-
-        const meshLineX = new MeshLineGeometry()
-        meshLineX.setPoints(data.map((d, i) => new Vector3(i / data.length, d.x / scale, 0)))
-        const meshLineY = new MeshLineGeometry()
-        meshLineY.setPoints(data.map((d, i) => new Vector3(i / data.length, d.y / scale, 0)))
-        const meshLineZ = new MeshLineGeometry()
-        meshLineZ.setPoints(data.map((d, i) => new Vector3(i / data.length, d.z / scale, 0)))
-        if (data[0].w !== undefined) {
-            const meshLineW = new MeshLineGeometry()
-            meshLineW.setPoints(data.map((d, i) => new Vector3(i / data.length, d.w / scale, 0)))
-
-            const speeds: number[] = []
-            for (let i = 1; i < data.length; i++) {
-                speeds.push(estimateScalarAngularVelocity(
-                    new Quaternion(data[i - 1].x, data[i - 1].y, data[i - 1].z, data[i - 1].w),
-                    new Quaternion(data[i].x, data[i].y, data[i].z, data[i].w),
-                    (duration ?? 0) / data.length
-                ))
-            }
-            const meshLineV = new MeshLineGeometry()
-
-            meshLineV.setPoints(speeds.map((d, i) => new Vector3(i / data.length, d, 0)))
-
-            if (showAngularVelocity) {
-                return [meshLineX, meshLineY, meshLineZ, meshLineW, meshLineV]
-            }
-            return [meshLineX, meshLineY, meshLineZ, meshLineW]
-        }
-        return [meshLineX, meshLineY, meshLineZ]
-    }, [data, duration, scale, showAngularVelocity])
-
-    const progressLine = useMemo(() => {
-        const line = new MeshLineGeometry()
-        line.setPoints([new Vector3(progress.current, -1, 0), new Vector3(progress.current, 1, 0)])
-        return line
-    }, [progress])
-
-
-    useFrame(() => {
-        progressLine.setPoints([new Vector3(progress.current, -1, 0), new Vector3(progress.current, 1, 0)])
-    })
-
-    if (data.length == 0) {
-        return null
-    }
-
-    const lineColors = [strawberryRed, teaGreen, skyBlue, plumMagenta, ashGray]
-
-    return (<>
-        <gridHelper args={[2, 20, ashGray, "#666666"]} position={[1, 0, 0]}
-                    rotation={[Math.PI / 2, 0, 0]}/>
-
-        {line.map((oneline, i) => (
-            <mesh key={i}>
-                <primitive attach="geometry" object={oneline}/>
-                <primitive
-                    attach="material"
-                    object={
-                        new MeshLineMaterial({
-                            color: lineColors[i],
-                            lineWidth: 0.005,
-                            transparent: i === 4,
-                            opacity: 0.5,
-                            resolution: new Vector2(10, 10)
-                        })
-                    }
-                />
-            </mesh>
-        ))}
-        <mesh>
-            <primitive attach="geometry" object={progressLine}/>
-            <primitive
-                attach="material"
-                object={
-                    new MeshLineMaterial({
-                        color: ashGray,
-                        lineWidth: 0.01,
-                        opacity: 1,
-                        resolution: new Vector2(10, 10),
-                        dashArray: 0.01,
-                        dashRatio: 0.3,
-                    })
-                }
-            />
-        </mesh>
-        {scale && (<>
-            <Text
-                position={[-0.01, 1, 0]}
-                fontSize={0.05}
-                color="white"
-                anchorX="right"
-                anchorY="middle"
-                scale={new Vector3(0.5, 1, 1)}
-            >
-                {scale.toFixed(2)}
-            </Text>
-            <Text
-                position={[-0.01, 0, 0]}
-                fontSize={0.05}
-                color="white"
-                anchorX="right"
-                anchorY="middle"
-                scale={new Vector3(0.5, 1, 1)}
-            >
-                {(0).toFixed(2)}
-            </Text>
-            <Text
-                position={[-0.01, -1, 0]}
-                fontSize={0.05}
-                color="white"
-                anchorX="right"
-                anchorY="middle"
-                scale={new Vector3(0.5, 1, 1)}
-            >
-                {(-scale).toFixed(2)}
-            </Text>
-        </>)}
-    </>)
-}
-
-export function estimateScalarAngularVelocity(
-    q1: Quaternion,
-    q2: Quaternion,
-    dt: number
-): number {
-    const qDelta = q1.clone().invert().multiply(q2).normalize()
-    const clampedW = Math.max(-1, Math.min(1, qDelta.w))
-    const angle = 2 * Math.acos(clampedW)
-    return angle / dt
-}

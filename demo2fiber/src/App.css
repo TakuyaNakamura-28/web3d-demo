@@ -8,15 +8,24 @@ h2 {
     height: 100vh;
     display: flex;
     flex-direction: row;
+    justify-content: start;
+    align-items: stretch;
 }
-canvas {
-    display: block; /* remove default inline spacing */
+.canvas {
+    width: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
+    canvas {
+        display: block;
+    }
 }
 
 .analysisUI {
     padding: 30px;
-    width: 50%;
     display: flex;
+    width: 0;
+    flex-grow: 1;
+    flex-shrink: 1;
     flex-direction: column;
     justify-content: stretch;
     background: #567;
