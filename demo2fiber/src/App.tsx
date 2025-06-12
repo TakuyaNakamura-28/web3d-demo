@@ -1,24 +1,21 @@
-import {Canvas, useFrame, useLoader, useThree} from '@react-three/fiber'
-import {slateGray} from "./colors.ts";
+import {Canvas, useFrame, useThree} from '@react-three/fiber'
 import {OrbitControls, Stats} from '@react-three/drei'
 import "./App.css"
 import "./slideSwitch.css"
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js'
-import {type RefObject, useEffect, useRef, useState} from "react";
+import {type ChangeEvent, type RefObject, useEffect, useRef, useState} from "react";
 import {
     AnimationAction,
     AnimationMixer,
     ArrowHelper,
     EquirectangularReflectionMapping,
-    KeyframeTrack,
+    KeyframeTrack, Object3D,
     SkeletonHelper, Vector3
 } from "three";
 import {ForcePlateOverlay} from "./ForcePlateOverlay.tsx";
 import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
 import {GraphWithVelocity} from "./GraphWithVelocity.tsx";
 import {ForcePlateArrows} from "./ForcePlateArrows.tsx";
-import {RGBELoader} from 'three/examples/jsm/loaders/RGBELoader.js'
-import hdrFile from './skybox/paul_lobe_haus_2k.hdr';
 
 const forcePlateStartDistance = 0.2;
 const forcePlateSpacing = 0.5;
@@ -52,6 +49,7 @@ function App() {
     const arrowRefs = useRef<ArrowHelper[]>([])
 
     const [forcePlateData, setForcePlateData] = useState<Array<Array<ForcePlateDatum>>>([])
+
     useEffect(() => {
         fetch('pressure.csv')
             .then(response => response.text())
@@ -63,13 +61,13 @@ function App() {
             })
     }, []);
 
-    const texture = useLoader(RGBELoader, hdrFile)
+    const [character2, setCharacter2] = useState<Object3D | null>(null)
+    const [trackData2, setTrackData2] = useState<Object3D | null>(null)
 
-    const character = useLoader(FBXLoader, 'f2.fbx')
-    const trackData = useLoader(FBXLoader, 'binaryMotiveData.fbx')
     const [skeleton, setSkeleton] = useState<SkeletonHelper | null>(null)
     const [skeletonEnabled, setSkeletonEnabled] = useState<boolean>(false)
     const [showAngularVelocity, setShowAngularVelocity] = useState<boolean>(false)
+    const [showUploadModal, setShowUploadModal] = useState<boolean>(false)
 
     const mixerRef = useRef<AnimationMixer>(undefined)
     const activeAction = useRef<AnimationAction>(undefined)
@@ -82,39 +80,49 @@ function App() {
     const [autoRotate, setAutoRotate] = useState<boolean>(false)
 
     useEffect(() => {
-        if (character && trackData.animations.length > 0) {
-            mixerRef.current = new AnimationMixer(character)
-            const clip = trackData.animations[0]
+        if (character2 && trackData2 && trackData2.animations.length > 0) {
+            mixerRef.current = new AnimationMixer(character2)
+            const clip = trackData2.animations[0]
             const action = mixerRef.current.clipAction(clip)
             activeAction.current = action
             action.play()
 
             setRawData(clip.tracks)
 
-            const skeletonHelper = new SkeletonHelper(character)
+            const skeletonHelper = new SkeletonHelper(character2)
             setSkeleton(skeletonHelper)
         }
-    }, [character, trackData])
+    }, [character2, trackData2])
+
+    const changePlaybackSpeed = (speed: number) => {
+        if (activeAction.current) {
+            activeAction.current.timeScale = speed
+        }
+        setPlaybackSpeed(Math.round(speed * 100) + "%")
+    }
 
     return (
         <div id="canvas-container">
             <div className={"canvas"}>
                 <Canvas
-                    camera={{fov: 75, near: 0.01, far: 1000}}
+                    camera={{fov: 75, near: 0.01, far: 1000, position: [1.5, 1, 2.5],}}
                 >
                     {/*<Skybox texture={texture}/>*/}
 
-                    <ForcePlateArrows arrowRefs={arrowRefs} forcePlateData={forcePlateData}
-                                      activeAction={activeAction.current} animationProgressRef={animationProgressRef}
-                                      start={forcePlateStartDistance}
-                                      spacing={forcePlateSpacing}
-                                      scale={forcePlateLength}
-                                      vectorScale={forcePlateVectorDisplayScale}
-                    />
+                    {(forcePlateData.length > 0) && <ForcePlateArrows
+                        arrowRefs={arrowRefs}
+                        forcePlateData={forcePlateData}
+                        activeAction={activeAction.current}
+                        animationProgressRef={animationProgressRef}
+                        start={forcePlateStartDistance}
+                        spacing={forcePlateSpacing}
+                        scale={forcePlateLength}
+                        vectorScale={forcePlateVectorDisplayScale}
+                    />}
 
                     <axesHelper scale={new Vector3(0.1, 0.1, 0.1)}/>
-                    <color attach="background" args={[slateGray]}/>
-                    <OrbitControls autoRotate={autoRotate} autoRotateSpeed={10.0}/>
+                    <color attach="background" args={[0x202020]}/>
+                    <OrbitControls autoRotate={autoRotate} autoRotateSpeed={4.0}/>
 
                     <ambientLight intensity={1} color={0xffffff}/>
                     <directionalLight
@@ -123,7 +131,7 @@ function App() {
                         position={[0.8, 1.4, 1.0]}
                     />
 
-                    <CharacterWithAnimation mixerRef={mixerRef} character={character}/>
+                    {character2 && <CharacterWithAnimation mixerRef={mixerRef} character={character2}/>}
 
                     <ForcePlateOverlay
                         start={forcePlateStartDistance}
@@ -163,34 +171,29 @@ function App() {
                     </Canvas>
                 </div>
                 <div className={"buttonList"}>
-                    <button onClick={() => {
-                        setGraphData(
-                            forcePlateData.map((row, i) =>
-                                ({index: i, x: row[0].x, y: row[0].y, z: row[0].z,}))
-                        )
-                    }}>フォースプレート1
-                    </button>
-                    <button onClick={() => {
-                        setGraphData(
-                            forcePlateData.map((row, i) =>
-                                ({index: i, x: row[1].x, y: row[1].y, z: row[1].z,}))
-                        )
-                    }}>フォースプレート2
-                    </button>
-                    <button onClick={() => {
-                        setGraphData(
-                            forcePlateData.map((row, i) =>
-                                ({index: i, x: row[2].x, y: row[2].y, z: row[2].z,}))
-                        )
-                    }}>フォースプレート3
-                    </button>
-                    <button onClick={() => {
-                        setGraphData(
-                            forcePlateData.map((row, i) =>
-                                ({index: i, x: row[3].x, y: row[3].y, z: row[3].z,}))
-                        )
-                    }}>フォースプレート4
-                    </button>
+                    {Array.from({length: 4}).map((_, forcePlateIndex) => (
+                        <>
+                            <button onClick={() => {
+                                setGraphData(
+                                    forcePlateData.map((row, i) =>
+                                        ({
+                                            index: i,
+                                            x: row[forcePlateIndex].x,
+                                            y: row[forcePlateIndex].y,
+                                            z: row[forcePlateIndex].z,
+                                        }))
+                                )
+                            }}>フォースプレート{forcePlateIndex + 1} 力
+                            </button>
+                            <button onClick={() => {
+                                setGraphData(
+                                    forcePlateData.map((row, i) =>
+                                        ({index: i, x: row[forcePlateIndex].px, y: row[forcePlateIndex].py, z: 0}))
+                                )
+                            }}>フォースプレート{forcePlateIndex + 1} 位置
+                            </button>
+                        </>
+                    ))}
 
                     {rawData.map((track) => (
                         <button key={track.name} onClick={() => {
@@ -215,7 +218,7 @@ function App() {
                             }
                             setGraphData(groupedData);
                         }}
-                        >{track.name}</button>
+                        >骨：{track.name}</button>
                     ))}
                     <button onClick={() => {
                         setGraphData([])
@@ -224,7 +227,8 @@ function App() {
                 </div>
                 <div>
                     <input
-                        type="range" min="-1.0" max="1.0" step="0.01" defaultValue="1.0"
+                        type="range" min="-1.0" max="1.0" step="0.01"
+                        value={activeAction.current?.timeScale ?? 1}
                         onChange={(e) => {
                             if (activeAction.current) {
                                 activeAction.current.timeScale = Number(e.target.value)
@@ -235,6 +239,18 @@ function App() {
                 </div>
                 <div>
                     現在再生速度：<strong className={"displayValue"}>{playbackSpeed}</strong>
+                    &nbsp;&nbsp;&nbsp;&nbsp;
+                    <span className="playbackButtons">
+                        <button onClick={() => {
+                            changePlaybackSpeed(-1)
+                        }}>◀</button>
+                        <button onClick={() => {
+                            changePlaybackSpeed(0)
+                        }}>⏸</button>
+                        <button onClick={() => {
+                            changePlaybackSpeed(+1)
+                        }}>▶</button>
+                    </span>
                 </div>
                 <p>
                     <label>
@@ -269,6 +285,55 @@ function App() {
                             }
                         />
                     </label>
+                    <br/>
+                    <button className="bigButton" onClick={() => {
+                        setShowUploadModal(true)
+                    }}>📂 データファイルを読み込む
+                    </button>
+                    {<dialog open={showUploadModal}>
+                        <h2>📁 データファイルを読み込む</h2>
+                        <p>
+                            <FallbackFBXLoader
+                                url="f2.fbx"
+                                label="キャラクターのFBXファイル"
+                                onLoad={(obj) => setCharacter2(obj)}
+                                onError={() => setShowUploadModal(true)}
+                            />
+                        </p>
+                        <p>
+                            <FallbackFBXLoader
+                                url="binaryMotiveData.fbx"
+                                label="トラックデータのFBXファイル"
+                                onLoad={(obj) => setTrackData2(obj)}
+                                onError={() => setShowUploadModal(true)}
+                            />
+                        </p>
+                        <p>
+                            <label><span><strong>フォースプレートのCSVファイル</strong>を読み込めなかった場合はローカルファイルを選択してください。</span>
+                                <input
+                                    type="file"
+                                    accept=".csv"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        const reader = new FileReader();
+                                        reader.onload = () => {
+                                            const csvText = reader.result as string;
+                                            setForcePlateData(parseForcePlateData(csvText))
+                                        };
+                                        reader.onerror = (err) => {
+                                            console.error("Failed to read file:", err);
+                                            setShowUploadModal(true);
+                                        };
+                                        reader.readAsText(file);
+                                    }}
+                                />
+                            </label>
+                        </p>
+                        <div style={{textAlign: "right"}}>
+                            <button className="bigButton cancel" onClick={() => setShowUploadModal(false)}>完了</button>
+                        </div>
+                    </dialog>}
                 </p>
             </div>
         </div>
@@ -276,3 +341,51 @@ function App() {
 }
 
 export default App;
+
+
+function FallbackFBXLoader({url, label, onLoad, onError}: {
+    url: string,
+    label: string,
+    onLoad: (object: Object3D) => void
+    onError: () => void
+}) {
+    const fileInputRef = useRef<HTMLInputElement>(null)
+
+    useEffect(() => {
+        const loader = new FBXLoader()
+        loader.load(
+            url,
+            (obj) => onLoad(obj),
+            undefined,
+            () => {
+                console.log(`${url} の読み込みが失敗しました。`)
+                onError()
+            }
+        )
+    }, [url])
+
+    const handleFileUpload = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0]
+        if (!file) return
+
+        const reader = new FileReader()
+        reader.onload = () => {
+            const arrayBuffer = reader.result as ArrayBuffer
+            const loader = new FBXLoader()
+            const obj = loader.parse(arrayBuffer, '')
+            onLoad(obj)
+        }
+        reader.readAsArrayBuffer(file)
+    }
+
+    return (
+        <label><span><strong>{label}</strong>を読み込めなかった場合はローカルファイルを選択してください。</span>
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept=".fbx"
+                onChange={handleFileUpload}
+            />
+        </label>
+    )
+}

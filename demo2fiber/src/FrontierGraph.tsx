@@ -1,7 +1,7 @@
-import {type RefObject, useEffect, useMemo, useState} from "react";
+import {type RefObject, useEffect, useMemo, useRef, useState} from "react";
 import {MeshLineGeometry, MeshLineMaterial} from "meshline";
-import { Vector2, Vector3} from "three";
-import {useFrame} from "@react-three/fiber";
+import {Vector2, Vector3} from "three";
+import {useFrame, useThree} from "@react-three/fiber";
 import {ashGray} from "./colors.ts";
 import {Text} from "@react-three/drei";
 
@@ -12,13 +12,28 @@ export default function FrontierGraph({data, progress, colors, dataKeys}: {
     dataKeys: string[]
 }) {
     const [graphScale, setGraphScale] = useState<number>(1.0)
+    const zoomLevelRef = useRef(1)
+
+    const { gl, viewport } = useThree();
+
+    useEffect(() => {
+        const canvas = gl.domElement;
+
+        const handleWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            zoomLevelRef.current = Math.min(Math.max(zoomLevelRef.current + e.deltaY * 0.01, 1), 20);
+        };
+
+        canvas.addEventListener("wheel", handleWheel, { passive: false });
+        return () => canvas.removeEventListener("wheel", handleWheel);
+    }, [gl.domElement]);
 
     useEffect(() => {
         if (data.length > 0) {
             setGraphScale(
                 Math.max(...data.map(datum =>
-                    Math.max(...dataKeys.map(key => Math.abs(datum[key])))
-                , 1))
+                        Math.max(...dataKeys.map(key => Math.abs(datum[key])))
+                    , 1))
             )
         }
     }, [data, dataKeys]);
@@ -46,11 +61,32 @@ export default function FrontierGraph({data, progress, colors, dataKeys}: {
 
 
     useFrame(() => {
-        progressLine.setPoints([new Vector3(progress.current, -1, 0), new Vector3(progress.current, 1, 0)])
+        const zoom = zoomLevelRef.current
+        if (progress.current > 1 / zoom / 2 && progress.current < (1 - 1 / zoom / 2)) {
+            progressLine.setPoints([new Vector3(0.5, -1, 0), new Vector3(0.5, 1, 0)])
+        } else if (progress.current < 0.5) {
+            progressLine.setPoints([new Vector3(progress.current * zoom, -1, 0), new Vector3(progress.current * zoom, 1, 0)])
+        } else if (progress.current > 0.5) {
+            progressLine.setPoints([new Vector3(1 + (progress.current - 1) * zoom, -1, 0), new Vector3(1 + (progress.current - 1) * zoom, 1, 0)])
+        }
+
+        const start = Math.min(
+            Math.max(0, Math.round(progress.current * data.length - data.length / zoom / 2)),
+            Math.round(data.length - data.length / zoom)
+        )
+        const end = Math.min(data.length, Math.round(start + data.length / zoom))
+        const slicedData = data.slice(start, end)
+
+        dataKeys.forEach((keyName, i) => {
+                lines[i].setPoints(
+                    slicedData.map((d, i) => new Vector3(i / slicedData.length, (d[keyName] ?? 0) / graphScale, 0))
+                )
+            }
+        )
     })
 
     return (<>
-        <gridHelper args={[2, 20, ashGray, "#666666"]} position={[1, 0, 0]}
+        <gridHelper args={[2, 20, "#555555", "#505050"]} position={[1, 0, 0]}
                     rotation={[Math.PI / 2, 0, 0]}/>
 
         {lines.map((oneline, i) => (
@@ -88,31 +124,34 @@ export default function FrontierGraph({data, progress, colors, dataKeys}: {
         {graphScale && (<>
             <Text
                 position={[-0.01, 1, 0]}
-                fontSize={0.05}
+                fontSize={0.07}
+                fontWeight={"bold"}
                 color="white"
                 anchorX="right"
                 anchorY="middle"
-                scale={new Vector3(0.5, 1, 1)}
+                scale={new Vector3(viewport.height/viewport.width/2, 1, 1)}
             >
                 {graphScale.toFixed(2)}
             </Text>
             <Text
                 position={[-0.01, 0, 0]}
-                fontSize={0.05}
+                fontSize={0.07}
+                fontWeight={"bold"}
                 color="white"
                 anchorX="right"
                 anchorY="middle"
-                scale={new Vector3(0.5, 1, 1)}
+                scale={new Vector3(viewport.height/viewport.width/2, 1, 1)}
             >
                 {(0).toFixed(2)}
             </Text>
             <Text
                 position={[-0.01, -1, 0]}
-                fontSize={0.05}
+                fontSize={0.07}
+                fontWeight={"bold"}
                 color="white"
                 anchorX="right"
                 anchorY="middle"
-                scale={new Vector3(0.5, 1, 1)}
+                scale={new Vector3(viewport.height/viewport.width/2, 1, 1)}
             >
                 {(-graphScale).toFixed(2)}
             </Text>

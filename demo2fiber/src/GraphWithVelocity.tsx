@@ -1,7 +1,7 @@
 import {type RefObject, useEffect, useState} from "react";
 import {Quaternion} from "three";
 import FrontierGraph from "./FrontierGraph.tsx";
-import {ashGray, plumMagenta, skyBlue, strawberryRed, teaGreen} from "./colors.ts";
+import {ashGray, plumMagenta, ramuneCyan, skyBlue, strawberryRed, sunYellow, teaGreen} from "./colors.ts";
 
 import {estimateScalarAngularVelocity} from "./estimateScalarAngularVelocity.tsx";
 
@@ -15,6 +15,7 @@ export function GraphWithVelocity({data, progress, duration, showAngularVelocity
 
     useEffect(() => {
         if (data.length == 0) {
+            setVisibleData([])
             return;
         }
         const newVisibleData: any[] = [...data]
@@ -37,10 +38,17 @@ export function GraphWithVelocity({data, progress, duration, showAngularVelocity
         return null;
     }
 
+    const keyPriorityOrder = ['x', 'y', 'z', 'w']
+    const dataKeys = [
+        ...keyPriorityOrder.filter(key => key in visibleData[0]),
+        ...Object.keys(visibleData[0])
+            .filter(key => key !== 'index' && !keyPriorityOrder.includes(key)),
+    ]
+
     return <FrontierGraph
         data={visibleData}
         progress={progress}
-        colors={[strawberryRed, teaGreen, skyBlue, plumMagenta, ashGray]}
-        dataKeys={Object.keys(visibleData[0]).filter(key => key != "index")}
+        colors={[strawberryRed, teaGreen, skyBlue, plumMagenta, ashGray, sunYellow, ramuneCyan]}
+        dataKeys={dataKeys}
     />
 }
