@@ -13,5 +13,5 @@ export default defineConfig({
     },
   },
   assetsInclude: ['**/*.hdr'],
+  base: '/web3d-demo/',
 })
-
