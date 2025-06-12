@@ -43,6 +43,7 @@ button {
     flex-direction: column;
     justify-content: stretch;
     background: #567;
+    overflow-y: scroll;
     .chartContainer {
         background: #181818;
         height: 40%;
@@ -50,6 +51,7 @@ button {
         padding: 10px;
     }
     .buttonList {
+        min-height: 80px;
         background: darkslategray;
         overflow-y: scroll;
         height: 0;

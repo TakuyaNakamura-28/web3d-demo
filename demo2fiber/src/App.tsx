@@ -1,4 +1,4 @@
-import {Canvas, useFrame, useThree} from '@react-three/fiber'
+import {Canvas, useFrame} from '@react-three/fiber'
 import {OrbitControls, Stats} from '@react-three/drei'
 import "./App.css"
 import "./slideSwitch.css"
@@ -8,7 +8,6 @@ import {
     AnimationAction,
     AnimationMixer,
     ArrowHelper,
-    EquirectangularReflectionMapping,
     KeyframeTrack, Object3D,
     SkeletonHelper, Vector3
 } from "three";
@@ -31,18 +30,6 @@ function CharacterWithAnimation({mixerRef, character}: {
     })
 
     return <primitive object={character} scale={[0.005, 0.005, 0.005]}/>
-}
-
-function Skybox({texture}: { texture: any }) {
-    const {scene} = useThree()
-
-    useEffect(() => {
-        texture.mapping = EquirectangularReflectionMapping
-        scene.environment = texture
-        scene.background = texture
-    }, [texture, scene])
-
-    return null
 }
 
 function App() {
@@ -107,7 +94,6 @@ function App() {
                 <Canvas
                     camera={{fov: 75, near: 0.01, far: 1000, position: [1.5, 1, 2.5],}}
                 >
-                    {/*<Skybox texture={texture}/>*/}
 
                     {(forcePlateData.length > 0) && <ForcePlateArrows
                         arrowRefs={arrowRefs}
