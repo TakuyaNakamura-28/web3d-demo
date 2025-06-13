@@ -276,52 +276,52 @@ function App() {
                         setShowUploadModal(true)
                     }}>📂 データファイルを読み込む
                     </button>
-                    {<dialog open={showUploadModal}>
-                        <h2>📁 データファイルを読み込む</h2>
-                        <p>
-                            <FallbackFBXLoader
-                                url="f2.fbx"
-                                label="キャラクターのFBXファイル"
-                                onLoad={(obj) => setCharacter2(obj)}
-                                onError={() => setShowUploadModal(true)}
-                            />
-                        </p>
-                        <p>
-                            <FallbackFBXLoader
-                                url="binaryMotiveData.fbx"
-                                label="トラックデータのFBXファイル"
-                                onLoad={(obj) => setTrackData2(obj)}
-                                onError={() => setShowUploadModal(true)}
-                            />
-                        </p>
-                        <p>
-                            <label><span><strong>フォースプレートのCSVファイル</strong>を読み込めなかった場合はローカルファイルを選択してください。</span>
-                                <input
-                                    type="file"
-                                    accept=".csv"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file) return;
-                                        const reader = new FileReader();
-                                        reader.onload = () => {
-                                            const csvText = reader.result as string;
-                                            setForcePlateData(parseForcePlateData(csvText))
-                                        };
-                                        reader.onerror = (err) => {
-                                            console.error("Failed to read file:", err);
-                                            setShowUploadModal(true);
-                                        };
-                                        reader.readAsText(file);
-                                    }}
-                                />
-                            </label>
-                        </p>
-                        <div style={{textAlign: "right"}}>
-                            <button className="bigButton cancel" onClick={() => setShowUploadModal(false)}>完了</button>
-                        </div>
-                    </dialog>}
                 </p>
             </div>
+            {<dialog open={showUploadModal}>
+                <h2>📁 データファイルを読み込む</h2>
+                <p>
+                    <FallbackFBXLoader
+                        url="f2.fbx"
+                        label="キャラクターのFBXファイル"
+                        onLoad={(obj) => setCharacter2(obj)}
+                        onError={() => setShowUploadModal(true)}
+                    />
+                </p>
+                <p>
+                    <FallbackFBXLoader
+                        url="binaryMotiveData.fbx"
+                        label="トラックデータのFBXファイル"
+                        onLoad={(obj) => setTrackData2(obj)}
+                        onError={() => setShowUploadModal(true)}
+                    />
+                </p>
+                <p>
+                    <label><span><strong>フォースプレートのCSVファイル</strong>を読み込めなかった場合はローカルファイルを選択してください。</span>
+                        <input
+                            type="file"
+                            accept=".csv"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    const csvText = reader.result as string;
+                                    setForcePlateData(parseForcePlateData(csvText))
+                                };
+                                reader.onerror = (err) => {
+                                    console.error("Failed to read file:", err);
+                                    setShowUploadModal(true);
+                                };
+                                reader.readAsText(file);
+                            }}
+                        />
+                    </label>
+                </p>
+                <div style={{textAlign: "right"}}>
+                    <button className="bigButton cancel" onClick={() => setShowUploadModal(false)}>完了</button>
+                </div>
+            </dialog>}
         </div>
     )
 }
