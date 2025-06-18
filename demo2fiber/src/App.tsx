@@ -282,7 +282,7 @@ function App() {
                     &nbsp;&nbsp;&nbsp;
                     <button className="bigButton" onClick={() => {
                         setReadmePopupIsOpen(true)
-                    }}>❓　説明書
+                    }}>❓ 説明書
                     </button>
                 </p>
             </div>
@@ -330,7 +330,9 @@ function App() {
                     <button className="bigButton cancel" onClick={() => setShowUploadModal(false)}>完了</button>
                 </div>
             </dialog>}
-            <MarkdownPopup isOpen={readmePopupIsOpen} onClose={() => {}} markdownContent={
+            <MarkdownPopup isOpen={readmePopupIsOpen} onClose={() => {
+                setReadmePopupIsOpen(false)
+            }} markdownContent={
                 readmeContent
             }/>
         </div>

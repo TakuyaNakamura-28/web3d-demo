@@ -4,7 +4,6 @@ import ReactThreeTestRenderer from '@react-three/test-renderer'
 import {render} from "@testing-library/react";
 import FrontierGraph from "./FrontierGraph.tsx";
 import {Vector2, Vector3} from "three";
-import {teaGreen} from "./colors.ts";
 import type {MeshLineGeometry} from "meshline";
 
 describe('FrontierGraph', () => {
