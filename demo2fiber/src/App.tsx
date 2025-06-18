@@ -15,6 +15,8 @@ import {ForcePlateOverlay} from "./ForcePlateOverlay.tsx";
 import {type ForcePlateDatum, parseForcePlateData} from "./forcePlateData.tsx";
 import {GraphWithVelocity} from "./GraphWithVelocity.tsx";
 import {ForcePlateArrows} from "./ForcePlateArrows.tsx";
+import readmeContent from '../readme.md?raw';
+import Markdown from "react-markdown";
 
 const forcePlateStartDistance = 0.2;
 const forcePlateSpacing = 0.5;
@@ -55,6 +57,7 @@ function App() {
     const [skeletonEnabled, setSkeletonEnabled] = useState<boolean>(false)
     const [showAngularVelocity, setShowAngularVelocity] = useState<boolean>(false)
     const [showUploadModal, setShowUploadModal] = useState<boolean>(false)
+    const [readmePopupIsOpen, setReadmePopupIsOpen] = useState<boolean>(false)
 
     const mixerRef = useRef<AnimationMixer>(undefined)
     const activeAction = useRef<AnimationAction>(undefined)
@@ -187,7 +190,7 @@ function App() {
                             for (let i = 0; i < track.values.length; i += (track.name.includes("quaternion") ? 4 : 3)) {
                                 if (track.name.includes("quaternion")) {
                                     groupedData.push({
-                                        index: i / 4,
+                                        index: i / 4, //
                                         x: track.values[i],
                                         y: track.values[i + 1],
                                         z: track.values[i + 2],
@@ -276,6 +279,11 @@ function App() {
                         setShowUploadModal(true)
                     }}>📂 データファイルを読み込む
                     </button>
+                    &nbsp;&nbsp;&nbsp;
+                    <button className="bigButton" onClick={() => {
+                        setReadmePopupIsOpen(true)
+                    }}>❓　説明書
+                    </button>
                 </p>
             </div>
             {<dialog open={showUploadModal}>
@@ -322,6 +330,9 @@ function App() {
                     <button className="bigButton cancel" onClick={() => setShowUploadModal(false)}>完了</button>
                 </div>
             </dialog>}
+            <MarkdownPopup isOpen={readmePopupIsOpen} onClose={() => {}} markdownContent={
+                readmeContent
+            }/>
         </div>
     )
 }
@@ -375,3 +386,29 @@ function FallbackFBXLoader({url, label, onLoad, onError}: {
         </label>
     )
 }
+
+
+function MarkdownPopup({isOpen, onClose, markdownContent}: {
+    isOpen: boolean,
+    onClose: () => void,
+    markdownContent: string
+}) {
+    return (
+        <dialog open={isOpen} className="markdownPopup">
+            <div style={{lineHeight: 1.5}}>
+                <button
+                    onClick={onClose}
+                    style={{float: "right", background: "none", border: "none", fontSize: "1.5rem", cursor: "pointer"}}
+                >
+                    ✖
+                </button>
+                <h2>📄 README</h2>
+                <hr/>
+                <Markdown>
+                    {markdownContent}
+                </Markdown>
+            </div>
+        </dialog>
+    );
+}
+
