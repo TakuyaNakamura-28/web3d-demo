@@ -8,10 +8,60 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/web3d-demo/assets/index-DIUaLiHF.js"></script>
+    <style>
+      body {
+        background: #202020;
+        padding: 0; margin: 0;
+      }
+
+      .bounce {
+        position: absolute;
+        box-sizing: border-box;
+        width: 150px;
+        height: 200px;
+        text-align: center;
+        padding-top: 160px;
+        background: #111d;
+        left: 50%;
+        top: 50%;
+        margin-left: -50px;
+        margin-top: -150px;
+        border-radius: 30px;
+        border: 2px solid #d1294344;
+        box-shadow: 0 0 20px #0008;
+        color: #d12943;
+        font-size: 12px;
+        &:before {
+          content: '';
+          width: 30px;
+          height: 30px;
+          background-image: radial-gradient(farthest-corner at 40px 40px, #561e85 0%, #d12943 100%);
+          border-radius: 50%;
+          animation: bouncer 1.5s infinite ease-in-out;
+          position: absolute;
+          left: 50%;
+          top: 60%;
+          margin-left: -15px;
+          z-index: 10000;
+        }
+      }
+      @keyframes bouncer {
+        0%, 100% { transform: translateY(0); }
+        2% { transform: translateY(7.5px) scaleY(0.5) scaleX(1.5); }
+        10% { transform: translateY(0    ) scaleY(1.0)            ; }
+        25% { transform: translateY(-50px) scaleY(1.2) scaleX(0.8); }
+        40% { transform: translateY(-80px) scaleY(1.1) scaleX(0.9); }
+        55% { transform: translateY(-90px) scaleY(1.0)            ; }
+        70% { transform: translateY(-80px) scaleY(1.1) scaleX(0.9); }
+        85% { transform: translateY(-50px) scaleY(1.2) scaleX(0.8); }
+      }
+    </style>
+    <script type="module" crossorigin src="/web3d-demo/assets/index-DxLdPD3q.js"></script>
     <link rel="stylesheet" crossorigin href="/web3d-demo/assets/index-8O7GV4at.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="bounce">…読み込み中…</div>
+    </div>
   </body>
 </html>
