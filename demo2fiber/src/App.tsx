@@ -17,6 +17,7 @@ import {GraphWithVelocity} from "./GraphWithVelocity.tsx";
 import {ForcePlateArrows} from "./ForcePlateArrows.tsx";
 import readmeContent from '../readme.md?raw';
 import Markdown from "react-markdown";
+import YomiKomiChu from "./YomiKomiChu.tsx";
 
 const forcePlateStartDistance = 0.2;
 const forcePlateSpacing = 0.5;
@@ -68,6 +69,7 @@ function App() {
     const [graphData, setGraphData] = useState<Array<{ x: number, y: number, z: number, w?: number }>>([])
     const [playbackSpeed, setPlaybackSpeed] = useState<string>("100")
     const [autoRotate, setAutoRotate] = useState<boolean>(false)
+    const [loadingCount, setLoadingCount] = useState<number>(1)
 
     useEffect(() => {
         if (character2 && trackData2 && trackData2.animations.length > 0) {
@@ -292,8 +294,14 @@ function App() {
                     <FallbackFBXLoader
                         url="f2.fbx"
                         label="キャラクターのFBXファイル"
-                        onLoad={(obj) => setCharacter2(obj)}
-                        onError={() => setShowUploadModal(true)}
+                        onLoad={(obj) => {
+                            setCharacter2(obj)
+                            setLoadingCount(n => n - 1)
+                        }}
+                        onError={() => {
+                            setShowUploadModal(true)
+                            setLoadingCount(n => n - 1)
+                        }}
                     />
                 </p>
                 <p>
@@ -335,6 +343,7 @@ function App() {
             }} markdownContent={
                 readmeContent
             }/>
+            {loadingCount > 0 && <YomiKomiChu/>}
         </div>
     )
 }

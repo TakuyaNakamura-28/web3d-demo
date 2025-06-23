@@ -1,10 +1,11 @@
 import {type RefObject, useEffect, useRef, useState} from "react";
 import {MeshLineGeometry, MeshLineMaterial} from "meshline";
 import {extend, useFrame, useThree} from '@react-three/fiber'
-import {MaterialNode, Object3DNode} from "three/src/nodes/Nodes";
 import {Vector2, Vector3} from "three";
 import {ashGray} from "./colors.ts";
 import {Text} from "@react-three/drei";
+// @ts-ignore
+import {MaterialNode, Object3DNode} from "three/src/nodes/Nodes";
 
 extend({MeshLineGeometry, MeshLineMaterial})
 
@@ -86,7 +87,7 @@ export default function FrontierGraph({data, progress, colors, dataKeys}: {
         {dataKeys.map((keyName, i) => (
             <mesh key={keyName}>
                 <meshLineGeometry
-                    points={[new Vector3(0,0,0), new Vector3(1,1,1)]}
+                    points={[new Vector3(0, 0, 0), new Vector3(1, 1, 1)]}
                     ref={(el: any) => {
                         dataLineRef.current[i] = el
                     }}
@@ -101,7 +102,7 @@ export default function FrontierGraph({data, progress, colors, dataKeys}: {
         ))}
         <mesh>
             <meshLineGeometry
-                points={[new Vector3(0,0,0), new Vector3(1,1,1)]}
+                points={[new Vector3(0, 0, 0), new Vector3(1, 1, 1)]}
                 ref={progressLineGeometryRef}
             />
             <meshLineMaterial

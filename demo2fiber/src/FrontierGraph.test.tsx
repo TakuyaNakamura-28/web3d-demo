@@ -51,9 +51,6 @@ describe('FrontierGraph', () => {
         await ReactThreeTestRenderer.act(async () => {
             await renderer.advanceFrames(1, 0.1)
         })
-
-        console.log(renderer.toTree())
-        console.log(renderer.scene.findAllByType("Mesh")[0].fiber.object.geometry.points)
     })
 
 
@@ -83,11 +80,5 @@ describe('FrontierGraph', () => {
         await ReactThreeTestRenderer.act(async () => {
             await renderer.advanceFrames(1, 0.1)
         })
-
-        console.log(renderer.toTree())
-        console.log(renderer.scene.findAllByType("Mesh")[0].fiber.object.geometry.points)
-        console.log(
-            renderer.scene.findAllByType("Mesh")[0].fiber.object.geometry.attributes.position.array
-        )
     })
 })

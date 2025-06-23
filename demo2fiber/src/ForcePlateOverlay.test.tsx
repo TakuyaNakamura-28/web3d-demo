@@ -26,7 +26,7 @@ describe('FrontierGraph', () => {
         expect(scale).toEqual(3.92)
     })
 
-    it('renders overlay with appropriate colors', async () => {
+    it('適切な色でフォースプレートoverlayを表示', async () => {
 
         const renderer = await ReactThreeTestRenderer.create(
             <ForcePlateOverlay
