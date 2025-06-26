@@ -74,7 +74,33 @@ function App() {
     useEffect(() => {
         if (character2 && trackData2 && trackData2.animations.length > 0) {
             mixerRef.current = new AnimationMixer(character2)
-            const clip = trackData2.animations[0]
+            const clip = trackData2.animations[0].clone()
+            
+            // Map track names to match character bone names
+            const characterBones = new Set<string>()
+            character2.traverse((child) => {
+                if (child.type === 'Bone') {
+                    characterBones.add(child.name)
+                }
+            })
+            
+            // Find the target prefix (e.g., "SubMg_") from character bones
+            const characterPrefix = Array.from(characterBones).find(name => name.includes('_'))?.split('_')[0] + '_'
+            
+            if (characterPrefix) {
+                clip.tracks.forEach(track => {
+                    // Extract the track prefix and bone name
+                    const trackNameParts = track.name.match(/^(.+?)_(.+)\.(.+)$/)
+                    if (trackNameParts) {
+                        const [, trackPrefix, boneName, property] = trackNameParts
+                        if (trackPrefix + '_' !== characterPrefix) {
+                            // Rename the track to match character prefix
+                            track.name = `${characterPrefix}${boneName}.${property}`
+                        }
+                    }
+                })
+            }
+            
             const action = mixerRef.current.clipAction(clip)
             activeAction.current = action
             action.play()
