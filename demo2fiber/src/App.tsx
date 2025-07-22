@@ -1,7 +1,6 @@
 import {Canvas, useFrame} from '@react-three/fiber'
 import {OrbitControls, Stats} from '@react-three/drei'
 import "./App.css"
-import "./slideSwitch.css"
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js'
 import {type ChangeEvent, type RefObject, useEffect, useRef, useState} from "react";
 import {
@@ -18,22 +17,17 @@ import {ForcePlateArrows} from "./ForcePlateArrows.tsx";
 import readmeContent from '../readme.md?raw';
 import Markdown from "react-markdown";
 import YomiKomiChu from "./YomiKomiChu.tsx";
+import Navbar from './components/Navbar';
+import FourViewports from './components/FourViewports';
+import PlaybackControls from './components/PlaybackControls';
+import LineChart from './components/LineChart';
+import ChatSection from './components/ChatSection';
 
 const forcePlateStartDistance = 0.2;
 const forcePlateSpacing = 0.5;
 const forcePlateLength = 0.5;
 const forcePlateVectorDisplayScale = 1 / 1000
 
-function CharacterWithAnimation({mixerRef, character}: {
-    mixerRef: RefObject<AnimationMixer | undefined>,
-    character: object
-}) {
-    useFrame((_, delta) => {
-        mixerRef.current?.update(delta)
-    })
-
-    return <primitive object={character} scale={[0.005, 0.005, 0.005]}/>
-}
 
 function App() {
     const arrowRefs = useRef<ArrowHelper[]>([])
@@ -70,6 +64,8 @@ function App() {
     const [playbackSpeed, setPlaybackSpeed] = useState<string>("100")
     const [autoRotate, setAutoRotate] = useState<boolean>(false)
     const [loadingCount, setLoadingCount] = useState<number>(1)
+    const [isPlaying, setIsPlaying] = useState<boolean>(true)
+    const [chartData, setChartData] = useState<Array<any>>([]);
 
     useEffect(() => {
         if (character2 && trackData2 && trackData2.animations.length > 0) {
@@ -106,6 +102,17 @@ function App() {
             action.play()
 
             setRawData(clip.tracks)
+            
+            // Initialize chart data
+            const mockChartData = [
+                { name: 'Jan', item1: 180, item2: 100 },
+                { name: 'Feb', item1: 200, item2: 120 },
+                { name: 'Mar', item1: 150, item2: 180 },
+                { name: 'Apr', item1: 280, item2: 200 },
+                { name: 'May', item1: 250, item2: 150 },
+                { name: 'Jun', item1: 240, item2: 160 },
+            ];
+            setChartData(mockChartData);
 
             const skeletonHelper = new SkeletonHelper(character2)
             setSkeleton(skeletonHelper)
@@ -118,201 +125,68 @@ function App() {
         }
         setPlaybackSpeed(Math.round(speed * 100) + "%")
     }
+    
+    const handlePlayPause = () => {
+        if (activeAction.current) {
+            if (isPlaying) {
+                activeAction.current.paused = true;
+            } else {
+                activeAction.current.paused = false;
+            }
+            setIsPlaying(!isPlaying);
+        }
+    };
+    
+    const handleProgressChange = (progress: number) => {
+        if (activeAction.current) {
+            const duration = activeAction.current.getClip().duration;
+            activeAction.current.time = progress * duration;
+        }
+    };
 
     return (
-        <div id="canvas-container">
-            <div className={"canvas"}>
-                <Canvas
-                    camera={{fov: 75, near: 0.01, far: 1000, position: [1.5, 1, 2.5],}}
-                >
-
-                    {(forcePlateData.length > 0) && <ForcePlateArrows
-                        arrowRefs={arrowRefs}
-                        forcePlateData={forcePlateData}
-                        activeAction={activeAction.current}
-                        animationProgressRef={animationProgressRef}
-                        start={forcePlateStartDistance}
-                        spacing={forcePlateSpacing}
-                        scale={forcePlateLength}
-                        vectorScale={forcePlateVectorDisplayScale}
-                    />}
-
-                    <axesHelper scale={new Vector3(0.1, 0.1, 0.1)}/>
-                    <color attach="background" args={[0x202020]}/>
-                    <OrbitControls autoRotate={autoRotate} autoRotateSpeed={4.0}/>
-
-                    <ambientLight intensity={1} color={0xffffff}/>
-                    <directionalLight
-                        color={0xffffff}
-                        intensity={0.8}
-                        position={[0.8, 1.4, 1.0]}
-                    />
-
-                    {character2 && <CharacterWithAnimation mixerRef={mixerRef} character={character2}/>}
-
-                    <ForcePlateOverlay
-                        start={forcePlateStartDistance}
-                        spacing={forcePlateSpacing}
-                        scale={forcePlateLength}
-                    />
-
-                    <gridHelper
-                        args={[100, 200, 0x000000, 0x000000]}
-                        position={[0, -0.01, 0]}
-                    />
-
-                    {skeletonEnabled && skeleton && <primitive object={skeleton}/>}
-
-                    <Stats showPanel={0}/>
-
-                </Canvas>
-            </div>
-            <div className={"analysisUI"}>
-                <h2>トヨ推 分析 情報 Frontier</h2>
-
-                <div className="chartContainer">
-                    <Canvas
-                        orthographic
-                        camera={{
-                            zoom: 1,
-                            left: -0.1, right: 1,
-                            top: 1.1, bottom: -1.1,
-                            near: -1000, far: 1000,
-                            position: [0, 0, 10],
-                        }}
-                    >
-                        <GraphWithVelocity data={graphData} progress={animationProgressRef}
-                                           duration={activeAction.current?.getClip().duration}
-                                           showAngularVelocity={showAngularVelocity}
+        <div className="flex flex-col h-screen bg-white">
+            <Navbar />
+            
+            <div className="flex-1 flex items-center justify-center p-6">
+                <div className="w-full max-w-[1280px] h-full flex gap-2">
+                    {/* Left Column - Viewports and Controls */}
+                    <div className="flex-1 flex flex-col justify-between">
+                        {/* 4 Viewports */}
+                        <FourViewports
+                            character={character2}
+                            mixerRef={mixerRef}
+                            skeleton={skeleton}
+                            skeletonEnabled={skeletonEnabled}
                         />
-                    </Canvas>
-                </div>
-                <div className={"buttonList"}>
-                    {Array.from({length: 4}).map((_, forcePlateIndex) => (
-                        <>
-                            <button onClick={() => {
-                                setGraphData(
-                                    forcePlateData.map((row, i) =>
-                                        ({
-                                            index: i,
-                                            x: row[forcePlateIndex].x,
-                                            y: row[forcePlateIndex].y,
-                                            z: row[forcePlateIndex].z,
-                                        }))
-                                )
-                            }}>フォースプレート{forcePlateIndex + 1} 力
-                            </button>
-                            <button onClick={() => {
-                                setGraphData(
-                                    forcePlateData.map((row, i) =>
-                                        ({index: i, x: row[forcePlateIndex].px, y: row[forcePlateIndex].py, z: 0}))
-                                )
-                            }}>フォースプレート{forcePlateIndex + 1} 位置
-                            </button>
-                        </>
-                    ))}
-
-                    {rawData.map((track) => (
-                        <button key={track.name} onClick={() => {
-                            const groupedData = []
-                            for (let i = 0; i < track.values.length; i += (track.name.includes("quaternion") ? 4 : 3)) {
-                                if (track.name.includes("quaternion")) {
-                                    groupedData.push({
-                                        index: i / 4, //
-                                        x: track.values[i],
-                                        y: track.values[i + 1],
-                                        z: track.values[i + 2],
-                                        w: track.values[i + 3],
-                                    })
-                                } else {
-                                    groupedData.push({
-                                        index: i / 3,
-                                        x: track.values[i],
-                                        y: track.values[i + 1],
-                                        z: track.values[i + 2],
-                                    })
-                                }
-                            }
-                            setGraphData(groupedData);
-                        }}
-                        >骨：{track.name}</button>
-                    ))}
-                    <button onClick={() => {
-                        setGraphData([])
-                    }}>無し
-                    </button>
-                </div>
-                <div>
-                    <input
-                        type="range" min="-1.0" max="1.0" step="0.01"
-                        value={activeAction.current?.timeScale ?? 1}
-                        onChange={(e) => {
-                            if (activeAction.current) {
-                                activeAction.current.timeScale = Number(e.target.value)
-                            }
-                            setPlaybackSpeed(Math.round(Number(e.target.value) * 100) + "%")
-                        }}
-                    />
-                </div>
-                <div>
-                    現在再生速度：<strong className={"displayValue"}>{playbackSpeed}</strong>
-                    &nbsp;&nbsp;&nbsp;&nbsp;
-                    <span className="playbackButtons">
-                        <button onClick={() => {
-                            changePlaybackSpeed(-1)
-                        }}>◀</button>
-                        <button onClick={() => {
-                            changePlaybackSpeed(0)
-                        }}>⏸</button>
-                        <button onClick={() => {
-                            changePlaybackSpeed(+1)
-                        }}>▶</button>
-                    </span>
-                </div>
-                <p>
-                    <label>
-                        自動回転
-                        <input
-                            type="checkbox"
-                            className="slideSwitchInput"
-                            onChange={(e) =>
-                                setAutoRotate(e.target.checked)
-                            }
+                        
+                        {/* Playback Controls */}
+                        <PlaybackControls
+                            progress={animationProgressRef.current}
+                            isPlaying={isPlaying}
+                            onPlayPause={handlePlayPause}
+                            onProgressChange={handleProgressChange}
                         />
-                    </label>
-                    <br/>
-                    <label>
-                        スケルトンを表示
-                        <input
-                            type="checkbox"
-                            className="slideSwitchInput"
-                            onChange={(e) =>
-                                setSkeletonEnabled(e.target.checked)
-                            }
-                        />
-                    </label>
-                    <br/>
-                    <label>
-                        角速度を表示
-                        <input
-                            type="checkbox"
-                            className="slideSwitchInput"
-                            onChange={(e) =>
-                                setShowAngularVelocity(e.target.checked)
-                            }
-                        />
-                    </label>
-                    <br/>
-                    <button className="bigButton" onClick={() => {
-                        setShowUploadModal(true)
-                    }}>📂 データファイルを読み込む
-                    </button>
-                    &nbsp;&nbsp;&nbsp;
-                    <button className="bigButton" onClick={() => {
-                        setReadmePopupIsOpen(true)
-                    }}>❓ 説明書
-                    </button>
-                </p>
+                        
+                        {/* Line Chart */}
+                        <div className="h-[246px]">
+                            <LineChart
+                                data={chartData}
+                                lines={[
+                                    { dataKey: 'item1', name: 'Item 1', color: '#ea580c' },
+                                    { dataKey: 'item2', name: 'Item 2', color: '#0d9488' }
+                                ]}
+                                showLegend={true}
+                                showGrid={true}
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Right Column - Chat Section */}
+                    <div className="w-60 h-full">
+                        <ChatSection />
+                    </div>
+                </div>
             </div>
             {<dialog open={showUploadModal}>
                 <h2>📁 データファイルを読み込む</h2>
@@ -369,6 +243,30 @@ function App() {
             }} markdownContent={
                 readmeContent
             }/>
+            
+            {/* Hidden Canvas for Force Plate Data */}
+            {(forcePlateData.length > 0) && (
+                <div className="hidden">
+                    <Canvas>
+                        <ForcePlateArrows
+                            arrowRefs={arrowRefs}
+                            forcePlateData={forcePlateData}
+                            activeAction={activeAction.current}
+                            animationProgressRef={animationProgressRef}
+                            start={forcePlateStartDistance}
+                            spacing={forcePlateSpacing}
+                            scale={forcePlateLength}
+                            vectorScale={forcePlateVectorDisplayScale}
+                        />
+                        <ForcePlateOverlay
+                            start={forcePlateStartDistance}
+                            spacing={forcePlateSpacing}
+                            scale={forcePlateLength}
+                        />
+                    </Canvas>
+                </div>
+            )}
+            
             {loadingCount > 0 && <YomiKomiChu/>}
         </div>
     )
