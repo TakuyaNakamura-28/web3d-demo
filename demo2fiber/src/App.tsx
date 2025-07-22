@@ -63,7 +63,7 @@ function App() {
     const [graphData, setGraphData] = useState<Array<{ x: number, y: number, z: number, w?: number }>>([])
     const [playbackSpeed, setPlaybackSpeed] = useState<string>("100")
     const [autoRotate, setAutoRotate] = useState<boolean>(false)
-    const [loadingCount, setLoadingCount] = useState<number>(1)
+    const [loadingCount, setLoadingCount] = useState<number>(0)
     const [isPlaying, setIsPlaying] = useState<boolean>(true)
     const [chartData, setChartData] = useState<Array<any>>([]);
 
@@ -153,20 +153,28 @@ function App() {
                     {/* Left Column - Viewports and Controls */}
                     <div className="flex-1 flex flex-col justify-between">
                         {/* 4 Viewports */}
-                        <FourViewports
-                            character={character2}
-                            mixerRef={mixerRef}
-                            skeleton={skeleton}
-                            skeletonEnabled={skeletonEnabled}
-                        />
+                        {character2 ? (
+                            <FourViewports
+                                character={character2}
+                                mixerRef={mixerRef}
+                                skeleton={skeleton}
+                                skeletonEnabled={skeletonEnabled}
+                            />
+                        ) : (
+                            <div className="h-[486px] w-full bg-neutral-100 rounded-lg flex items-center justify-center">
+                                <span className="text-neutral-500">3Dモデルを読み込み中...</span>
+                            </div>
+                        )}
                         
                         {/* Playback Controls */}
-                        <PlaybackControls
-                            progress={animationProgressRef.current}
-                            isPlaying={isPlaying}
-                            onPlayPause={handlePlayPause}
-                            onProgressChange={handleProgressChange}
-                        />
+                        {activeAction.current && (
+                            <PlaybackControls
+                                progress={animationProgressRef.current}
+                                isPlaying={isPlaying}
+                                onPlayPause={handlePlayPause}
+                                onProgressChange={handleProgressChange}
+                            />
+                        )}
                         
                         {/* Line Chart */}
                         <div className="h-[246px]">
@@ -188,7 +196,7 @@ function App() {
                     </div>
                 </div>
             </div>
-            {<dialog open={showUploadModal}>
+            {showUploadModal && <dialog open={true}>
                 <h2>📁 データファイルを読み込む</h2>
                 <p>
                     <FallbackFBXLoader
@@ -196,11 +204,10 @@ function App() {
                         label="キャラクターのFBXファイル"
                         onLoad={(obj) => {
                             setCharacter2(obj)
-                            setLoadingCount(n => n - 1)
+                            setShowUploadModal(false)
                         }}
                         onError={() => {
                             setShowUploadModal(true)
-                            setLoadingCount(n => n - 1)
                         }}
                     />
                 </p>
@@ -208,7 +215,10 @@ function App() {
                     <FallbackFBXLoader
                         url="binaryMotiveData.fbx"
                         label="トラックデータのFBXファイル"
-                        onLoad={(obj) => setTrackData2(obj)}
+                        onLoad={(obj) => {
+                            setTrackData2(obj)
+                            setShowUploadModal(false)
+                        }}
                         onError={() => setShowUploadModal(true)}
                     />
                 </p>

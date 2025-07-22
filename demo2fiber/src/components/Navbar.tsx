@@ -9,7 +9,7 @@ const Navbar: React.FC<NavbarProps> = ({ primaryButton = true }) => {
   const activeItem = 'Dashboard';
 
   return (
-    <div className="relative w-full h-16 bg-white border-b border-neutral-200 shadow-xs">
+    <div className="relative w-full h-16 bg-white border-b border-neutral-200 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)]">
       <div className="flex flex-row items-center h-full px-6">
         <div className="flex flex-row items-center justify-between w-full max-w-[1280px] mx-auto">
           {/* Logo */}
@@ -37,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ primaryButton = true }) => {
 
             {/* Primary Button */}
             {primaryButton && (
-              <button className="flex flex-row items-center gap-2 px-4 py-2 h-9 bg-neutral-900 text-neutral-50 rounded-lg shadow-xs hover:bg-neutral-800 transition-colors">
+              <button className="flex flex-row items-center gap-2 px-4 py-2 h-9 bg-neutral-900 text-neutral-50 rounded-lg shadow-[0px_1px_2px_0px_rgba(0,0,0,0.05)] hover:bg-neutral-800 transition-colors">
                 <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
                   <path
                     d="M8 1.5V14.5M14.5 8H1.5"

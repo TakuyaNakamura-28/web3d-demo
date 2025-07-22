@@ -1,5 +1,78 @@
 /* Keep minimal styles that aren't covered by Tailwind */
 
+/* Modal styles */
+dialog {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: #333;
+    border: 4px solid black;
+    padding: 50px;
+    border-radius: 20px;
+    color: white;
+    z-index: 999;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow:
+        0  8px  16px        rgba(0, 0, 0, 0.4),
+        0 12px  32px        rgba(0, 0, 0, 0.3),
+        0 16px  48px        rgba(0, 0, 0, 0.2),
+        0  0     0   5000px rgba(0, 0, 0, 0.4);
+}
+
+dialog h2 {
+    margin-top: 0;
+}
+
+dialog label {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 40px 0;
+}
+
+dialog label span {
+    line-height: 1.5;
+}
+
+dialog label strong {
+    color: #ff8;
+    font-weight: bold;
+}
+
+dialog pre {
+    text-wrap: wrap;
+}
+
+dialog.markdownPopup {
+    width: 70%;
+}
+
+.bigButton {
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: #006;
+    color: white;
+    border: 1px solid #003;
+    cursor: pointer;
+}
+
+.bigButton:hover {
+    background: #049;
+}
+
+.bigButton.cancel {
+    background: #800;
+    border: 1px solid #400;
+    margin-right: 20px;
+}
+
+.bigButton.cancel:hover {
+    background: #a22;
+}
+
 input[type=range] {
     width: 100%;
     -webkit-appearance: none;

@@ -58,7 +58,9 @@ const ViewportContent: React.FC<Omit<ViewportProps, 'label'>> = ({
           makeDefault
           position={getCameraPosition()}
           rotation={getCameraRotation()}
-          zoom={100}
+          zoom={150}
+          near={-1000}
+          far={1000}
         />
       )}
       
@@ -100,8 +102,13 @@ const Viewport: React.FC<ViewportProps> = ({
   label 
 }) => {
   return (
-    <div className="relative h-60 bg-[#414141] rounded-sm border border-neutral-400">
-      <Canvas>
+    <div className="relative h-60 bg-[#414141] rounded-sm border border-neutral-400 overflow-hidden">
+      <Canvas
+        camera={viewType === 'perspective' ? {
+          fov: 75,
+          position: getCameraPosition()
+        } : undefined}
+      >
         <ViewportContent 
           character={character}
           mixerRef={mixerRef}
